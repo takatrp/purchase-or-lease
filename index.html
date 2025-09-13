@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>購入 vs リース 判定ツール（r1）</title>
+<style>
+  :root{
+    --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46;
+  }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif;}
+  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:10px 14px;z-index:5}
+  header h1{font-size:18px;margin:0}
+  main{padding:12px;display:grid;gap:12px;max-width:1100px;margin:0 auto}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 16px rgba(2,6,23,.06);padding:12px}
+  .grid{display:grid;gap:10px}
+  .g2{grid-template-columns:1fr} @media(min-width:840px){.g2{grid-template-columns:1fr 1fr}}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  input,select{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;font-size:16px}
+  .row{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center}
+  .row span.hint{font-size:12px;color:var(--muted)}
+  .title{font-weight:700;margin:4px 0 8px}
+  .muted{color:var(--muted)}
+  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700}
+  .btn.secondary{background:#0f172a}
+  .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:10px}
+  .pos{color:var(--good);font-weight:800}
+  .neg{color:var(--bad);font-weight:800}
+  table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1}
+  th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .footer{font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>購入 vs リース 判定ツール（r1）</h1>
+</header>
+<main>
+  <section class="card">
+    <div class="title">前提（共通）</div>
+    <div class="grid g2">
+      <div>
+        <label>分析期間（年）</label>
+        <input type="number" id="years" value="5" min="1" step="1">
+      </div>
+      <div>
+        <label>割引率（税引後・%）<span class="muted">　資金の機会費用/WACC など</span></label>
+        <input type="number" id="disc" value="3.0" step="0.1">
+      </div>
+      <div>
+        <label>実効税率（%）<span class="muted">　法人税・地方法人税・住民税・事業税の合計目安</span></label>
+        <input type="number" id="tax" value="31.0" step="0.1">
+      </div>
+      <div>
+        <label>消費税率（%）</label>
+        <input type="number" id="vatRate" value="10" step="0.1">
+      </div>
+      <div>
+        <label>仕入税額控除割合（%）<span class="muted">　原則100%、簡易課税・共通対応は任意%</span></label>
+        <input type="number" id="vatCreditRatio" value="100" step="1" min="0" max="100">
+      </div>
+      <div>
+        <label>表記</label>
+        <select id="fmt">
+          <option value="auto" selected>自動（万円に丸め）</option>
+          <option value="yen">円（カンマ）</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="title">購入シナリオ</div>
+    <div class="grid g2">
+      <div>
+        <label>購入価額（税抜）</label>
+        <input type="number" id="buyPrice" value="5000000" step="10000">
+      </div>
+      <div>
+        <label>耐用年数（年）<span class="muted">　定額法・残存1円で計算</span></label>
+        <input type="number" id="life" value="5" min="1" step="1">
+      </div>
+      <div>
+        <label>借入割合（%）</label>
+        <input type="number" id="debtRatio" value="100" min="0" max="100" step="1">
+      </div>
+      <div>
+        <label>借入金利（年率%）</label>
+        <input type="number" id="loanRate" value="2.0" step="0.1">
+      </div>
+      <div>
+        <label>借入返済年数（年）<span class="muted">　元利均等</span></label>
+        <input type="number" id="loanYears" value="5" min="1" step="1">
+      </div>
+      <div>
+        <label>保有コスト（年額・税抜）<span class="muted">　保守・保険・固定資産税 等</span></label>
+        <input type="number" id="holdingCost" value="100000" step="1000">
+      </div>
+      <div>
+        <label>最終処分/売却価額（税抜・+で収入）</label>
+        <input type="number" id="salvage" value="0" step="1000">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="title">リースシナリオ</div>
+    <div class="grid g2">
+      <div>
+        <label>リース料（年額・税抜）</label>
+        <input type="number" id="leasePay" value="1100000" step="1000">
+      </div>
+      <div>
+        <label>リース年数（年）</label>
+        <input type="number" id="leaseYears" value="5" min="1" step="1">
+      </div>
+      <div>
+        <label>初回費用（税抜）<span class="muted">　保証料・設定費等</span></label>
+        <input type="number" id="leaseInit" value="0" step="1000">
+      </div>
+      <div>
+        <label>満了時買取額（税抜・任意）</label>
+        <input type="number" id="leaseBuyout" value="0" step="1000">
+      </div>
+      <div>
+        <label>消費税控除のタイミング</label>
+        <select id="leaseVatTiming">
+          <option value="upfront" selected>一括控除（引渡時）</option>
+          <option value="spread">分割控除（支払期日ごと）</option>
+        </select>
+      </div>
+      <div>
+        <label>保守等の付帯費用（年額・税抜）</label>
+        <input type="number" id="leaseMaint" value="0" step="1000">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="grid g2">
+      <button class="btn" id="run">試算する</button>
+      <button class="btn secondary" id="sample">サンプルを読み込む</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="title">判定</div>
+    <div class="kpi">
+      <div class="box">
+        <div class="muted">購入の現在価値（NPC）</div>
+        <div id="buyNPV" style="font-size:20px;font-weight:800">-</div>
+        <div class="muted">等価年額（EAC）<span class="pill" id="buyEAC">-</span></div>
+      </div>
+      <div class="box">
+        <div class="muted">リースの現在価値（NPC）</div>
+        <div id="leaseNPV" style="font-size:20px;font-weight:800">-</div>
+        <div class="muted">等価年額（EAC）<span class="pill" id="leaseEAC">-</span></div>
+      </div>
+    </div>
+    <p id="verdict" style="font-weight:800"></p>
+  </section>
+
+  <section class="card">
+    <div class="title">キャッシュフロー明細（税効果込・消費税控除反映）</div>
+    <div id="tables"></div>
+  </section>
+
+  <section class="footer card">
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r1</div>
+  </section>
+</main>
+
+<script>
+const fmtChoice = ()=>document.getElementById('fmt').value;
+const yenFmt = n=>{
+  if(fmtChoice()==='auto') return (n/10000).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 万円';
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 円';
+};
+const toRate = v => Number(v)/100;
+const npv = (rate, cfs)=> cfs.reduce((acc,cf,t)=> acc + cf/Math.pow(1+rate,t), 0);
+const eacFromNPV = (rate, npv, years)=>{
+  if(rate===0) return npv/years; // avoid div by 0
+  const ann = rate * npv / (1 - Math.pow(1+rate,-years));
+  return ann;
+}
+function amortization(loan, rate, nYears){
+  // yearly annuity schedule (end of year payments)
+  const r = rate; const n = nYears; const pay = r===0? loan/n : loan * (r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);
+  let bal = loan; const rows=[];
+  for(let y=1;y<=n;y++){
+    const interest = bal * r;
+    const principal = pay - interest;
+    bal = Math.max(0, bal - principal);
+    rows.push({year:y, pay, interest, principal, bal});
+  }
+  return {pay, rows};
+}
+function buildTables(title, rows){
+  const th = `<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>`;
+  const trs = rows.map(r=>`<tr><td>${r.year}</td><td>${fmt(r.ocf)}</td><td>${fmt(r.capex)}</td><td>${fmt(r.tax)}</td><td>${fmt(r.vat)}</td><td>${fmt(r.fin)}</td><td><b>${fmt(r.total)}</b></td></tr>`).join('');
+  return `<h3 style="margin:8px 0">${title}</h3><div style="overflow:auto"><table>${th}${trs}</table></div>`
+}
+function fmt(n){ return (n>=0? '' : '-') + yenFmt(Math.abs(n)); }
+
+function run(){
+  const years = +document.getElementById('years').value;
+  const disc = toRate(document.getElementById('disc').value);
+  const tax = toRate(document.getElementById('tax').value);
+  const vatRate = toRate(document.getElementById('vatRate').value);
+  const vatCreditRatio = toRate(document.getElementById('vatCreditRatio').value);
+
+  // Purchase inputs
+  const price = +document.getElementById('buyPrice').value; // ex VAT
+  const life = +document.getElementById('life').value;
+  const debtRatio = toRate(document.getElementById('debtRatio').value);
+  const loanRate = toRate(document.getElementById('loanRate').value);
+  const loanYears = +document.getElementById('loanYears').value;
+  const holding = +document.getElementById('holdingCost').value;
+  const salvage = +document.getElementById('salvage').value;
+
+  // Lease inputs
+  const leasePay = +document.getElementById('leasePay').value;
+  const leaseYears = +document.getElementById('leaseYears').value;
+  const leaseInit = +document.getElementById('leaseInit').value;
+  const leaseBuyout = +document.getElementById('leaseBuyout').value;
+  const leaseVatTiming = document.getElementById('leaseVatTiming').value; // upfront or spread
+  const leaseMaint = +document.getElementById('leaseMaint').value;
+
+  const tablesDiv = document.getElementById('tables');
+
+  // ---------------- Purchase scenario -----------------
+  const dep = Math.max(0,(price - 1)) / life; // straight-line to 1 yen
+  const loanAmt = price * debtRatio;
+  const loan = amortization(loanAmt, loanRate, Math.min(loanYears, years));
+
+  const buyRows=[]; let cfs=[];
+  for(let y=0;y<=years;y++){
+    let ocf=0, capex=0, fin=0, taxShield=0, vat=0;
+    if(y===0){
+      // initial cash out: price + VAT (if not fully creditable instantly)
+      const vatCash = price*vatRate; // paid at purchase
+      // VAT credit in same period (assume同課税期間)
+      vat = + vatCash * vatCreditRatio; // inflow (credit)
+      capex = - (price + vatCash);
+      if(loanAmt>0){ fin += loanAmt; } // loan proceeds inflow
+    } else {
+      // yearly operations
+      const yearHolding = holding; // expense (deductible)
+      const depExp = y<=life ? dep : 0; // deductible
+      const taxBaseImpact = -yearHolding - depExp; // expenses reduce tax base
+      taxShield = - (taxBaseImpact) * tax; // tax reduction is positive CF
+
+      ocf = - yearHolding; // cash for holding
+
+      // loan payments within loanYears
+      if(y<=loan.rows.length){
+        const r = loan.rows[y-1];
+        fin -= r.pay; // cash out
+        // tax shield for interest
+        taxShield += r.interest * tax;
+      }
+      // salvage at end of horizon
+      if(y===years && salvage!==0){
+        ocf += salvage; // ignore tax on gain/loss (model簡略)
+        // VAT on sale (if taxable)
+        const salvageVAT = salvage*vatRate; // buyer pays VAT to us; not modeled to P&L; assume入金
+        ocf += salvageVAT; // inflow
+        vat -= salvageVAT*vatCreditRatio; // output tax reduces net VAT credit (簡略)
+      }
+    }
+    const total = ocf + capex + taxShield + vat + fin;
+    buyRows.push({year:y, ocf, capex, tax:taxShield, vat, fin, total});
+    cfs.push(total);
+  }
+  const buyNPVv = npv(disc, cfs);
+  const buyEACv = eacFromNPV(disc, -buyNPVv, years); // costs positive → show as cost
+
+  // ---------------- Lease scenario -----------------
+  const leaseRows=[]; cfs=[];
+  for(let y=0;y<=years;y++){
+    let ocf=0, capex=0, fin=0, taxShield=0, vat=0;
+    if(y===0){
+      if(leaseInit>0){
+        const vatCash = leaseInit*vatRate;
+        capex = -(leaseInit + vatCash);
+        vat = vatCash*vatCreditRatio; // credit
+      }
+      if(leaseVatTiming==='upfront'){
+        // upfront credit on total payments expected within lease term (税務の原則を近似)
+        const totalLeaseBase = leasePay*Math.min(leaseYears, years) + leaseBuyout;
+        const vatCashAll = totalLeaseBase * vatRate;
+        // 現金の実支出は都度だが、控除のみ upfront に認識（近似）
+        vat += vatCashAll * vatCreditRatio;
+      }
+    } else {
+      if(y<=leaseYears){
+        const base = leasePay;
+        const vatCash = base*vatRate;
+        ocf -= base; // lease payment (税抜)
+        // tax shield: lease expense deductible
+        taxShield += base * tax;
+        if(leaseVatTiming==='spread'){
+          vat += vatCash * vatCreditRatio; // credit when paid
+        }
+      }
+      if(y===leaseYears && leaseBuyout>0){
+        const vatCash = leaseBuyout*vatRate;
+        ocf -= leaseBuyout;
+        // tax shield: buyoutは資産取得のため損金算入されない（簡略→ここでは損金なし）
+        if(leaseVatTiming==='spread') vat += vatCash * vatCreditRatio;
+      }
+      if(leaseMaint>0){
+        ocf -= leaseMaint;
+        taxShield += leaseMaint * tax;
+        if(leaseVatTiming==='spread') vat += leaseMaint*vatRate*vatCreditRatio;
+      }
+    }
+    const total = ocf + capex + taxShield + vat + fin;
+    leaseRows.push({year:y, ocf, capex, tax:taxShield, vat, fin, total});
+    cfs.push(total);
+  }
+  const leaseNPVv = npv(disc, cfs);
+  const leaseEACv = eacFromNPV(disc, -leaseNPVv, years);
+
+  // write
+  document.getElementById('buyNPV').textContent = (buyNPVv>=0? '' : '-') + yenFmt(Math.abs(buyNPVv));
+  document.getElementById('leaseNPV').textContent = (leaseNPVv>=0? '' : '-') + yenFmt(Math.abs(leaseNPVv));
+  document.getElementById('buyEAC').textContent = yenFmt(buyEACv);
+  document.getElementById('leaseEAC').textContent = yenFmt(leaseEACv);
+
+  const verdict = ( -buyNPVv < -leaseNPVv ) ? '購入のコスト（NPC/EAC）が小さく、有利と判定しました。' : ( -leaseNPVv < -buyNPVv ) ? 'リースのコスト（NPC/EAC）が小さく、有利と判定しました。' : '両者はほぼ同等です。契約条件の見直しをご検討ください。';
+  document.getElementById('verdict').textContent = verdict;
+
+  tablesDiv.innerHTML = buildTables('購入', buyRows) + buildTables('リース', leaseRows);
+}
+
+function loadSample(){
+  document.getElementById('years').value=5;
+  document.getElementById('disc').value=3.0;
+  document.getElementById('tax').value=31.0;
+  document.getElementById('vatRate').value=10;
+  document.getElementById('vatCreditRatio').value=100;
+  document.getElementById('buyPrice').value=5_000_000;
+  document.getElementById('life').value=5;
+  document.getElementById('debtRatio').value=100;
+  document.getElementById('loanRate').value=2.0;
+  document.getElementById('loanYears').value=5;
+  document.getElementById('holdingCost').value=100_000;
+  document.getElementById('salvage').value=0;
+  document.getElementById('leasePay').value=1_100_000;
+  document.getElementById('leaseYears').value=5;
+  document.getElementById('leaseInit').value=0;
+  document.getElementById('leaseBuyout').value=0;
+  document.getElementById('leaseVatTiming').value='upfront';
+  document.getElementById('leaseMaint').value=0;
+  run();
+}
+
+document.getElementById('run').addEventListener('click', run);
+document.getElementById('sample').addEventListener('click', loadSample);
+
+// 初回
+loadSample();
+</script>
+</body>
+</html>
