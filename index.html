@@ -44,23 +44,23 @@
     <div class="grid g2">
       <div>
         <label>分析期間（年）</label>
-        <input type="number" id="years" value="5" min="1" step="1">
+        <input type="text" class="num" id="years" value="5" min="1" step="1">
       </div>
       <div>
         <label>割引率（税引後・%）<span class="muted">　資金の機会費用/WACC など</span></label>
-        <input type="number" id="disc" value="3.0" step="0.1">
+        <input type="text" class="num" id="disc" value="3.0" step="0.1">
       </div>
       <div>
         <label>実効税率（%）<span class="muted">　法人税・地方法人税・住民税・事業税の合計目安</span></label>
-        <input type="number" id="tax" value="31.0" step="0.1">
+        <input type="text" class="num" id="tax" value="31.0" step="0.1">
       </div>
       <div>
         <label>消費税率（%）</label>
-        <input type="number" id="vatRate" value="10" step="0.1">
+        <input type="text" class="num" id="vatRate" value="10" step="0.1">
       </div>
       <div>
         <label>仕入税額控除割合（%）<span class="muted">　原則100%、簡易課税・共通対応は任意%</span></label>
-        <input type="number" id="vatCreditRatio" value="100" step="1" min="0" max="100">
+        <input type="text" class="num" id="vatCreditRatio" value="100" step="1" min="0" max="100">
       </div>
       <div>
         <label>表記</label>
@@ -77,31 +77,31 @@
     <div class="grid g2">
       <div>
         <label>購入価額（税抜）</label>
-        <input type="number" id="buyPrice" value="5000000" step="10000">
+        <input type="text" class="num" id="buyPrice" value="5000000" step="10000">
       </div>
       <div>
         <label>耐用年数（年）<span class="muted">　定額法・残存1円で計算</span></label>
-        <input type="number" id="life" value="5" min="1" step="1">
+        <input type="text" class="num" id="life" value="5" min="1" step="1">
       </div>
       <div>
         <label>借入割合（%）</label>
-        <input type="number" id="debtRatio" value="100" min="0" max="100" step="1">
+        <input type="text" class="num" id="debtRatio" value="100" min="0" max="100" step="1">
       </div>
       <div>
         <label>借入金利（年率%）</label>
-        <input type="number" id="loanRate" value="2.0" step="0.1">
+        <input type="text" class="num" id="loanRate" value="2.0" step="0.1">
       </div>
       <div>
         <label>借入返済年数（年）<span class="muted">　元利均等</span></label>
-        <input type="number" id="loanYears" value="5" min="1" step="1">
+        <input type="text" class="num" id="loanYears" value="5" min="1" step="1">
       </div>
       <div>
         <label>保有コスト（年額・税抜）<span class="muted">　保守・保険・固定資産税 等</span></label>
-        <input type="number" id="holdingCost" value="100000" step="1000">
+        <input type="text" class="num" id="holdingCost" value="100000" step="1000">
       </div>
       <div>
         <label>最終処分/売却価額（税抜・+で収入）</label>
-        <input type="number" id="salvage" value="0" step="1000">
+        <input type="text" class="num" id="salvage" value="0" step="1000">
       </div>
     </div>
   </section>
@@ -111,19 +111,19 @@
     <div class="grid g2">
       <div>
         <label>リース料（年額・税抜）</label>
-        <input type="number" id="leasePay" value="1100000" step="1000">
+        <input type="text" class="num" id="leasePay" value="1100000" step="1000">
       </div>
       <div>
         <label>リース年数（年）</label>
-        <input type="number" id="leaseYears" value="5" min="1" step="1">
+        <input type="text" class="num" id="leaseYears" value="5" min="1" step="1">
       </div>
       <div>
         <label>初回費用（税抜）<span class="muted">　保証料・設定費等</span></label>
-        <input type="number" id="leaseInit" value="0" step="1000">
+        <input type="text" class="num" id="leaseInit" value="0" step="1000">
       </div>
       <div>
         <label>満了時買取額（税抜・任意）</label>
-        <input type="number" id="leaseBuyout" value="0" step="1000">
+        <input type="text" class="num" id="leaseBuyout" value="0" step="1000">
       </div>
       <div>
         <label>消費税控除のタイミング</label>
@@ -134,7 +134,7 @@
       </div>
       <div>
         <label>保守等の付帯費用（年額・税抜）</label>
-        <input type="number" id="leaseMaint" value="0" step="1000">
+        <input type="text" class="num" id="leaseMaint" value="0" step="1000">
       </div>
     </div>
   </section>
@@ -180,6 +180,56 @@ const yenFmt = n=>{
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 円';
 };
 const toRate = v => Number(v)/100;
+// --- リアルタイム・カンマ入力サポート（正規表現を使わない実装） ---
+function splitNumStr(s){
+  s = (s==null? '' : String(s));
+  let neg = false; if(s.startsWith('-')){ neg = true; s = s.slice(1); }
+  let int='', dec='', dot=false;
+  for(const ch of s){
+    if(ch >= '0' && ch <= '9'){ if(dot) dec += ch; else int += ch; }
+    else if(ch === '.' && !dot){ dot = true; }
+  }
+  return {neg,int,dec};
+}
+function thousands(int){
+  if(!int) int='0';
+  if(int.length <= 3) return int;
+  let out=''; const n=int.length;
+  for(let i=0;i<n;i++){
+    out += int[i]; const rem = n - i - 1; if(rem>0 && rem % 3 === 0) out += ',';
+  }
+  return out;
+}
+function fmtInputString(v){
+  if(v===null || v===undefined || v==='') return '';
+  const {neg,int,dec} = splitNumStr(v);
+  let s = thousands(int);
+  if(dec) s += '.' + dec;
+  return (neg?'-':'') + s;
+}
+function toNum(v){
+  if(v===null || v===undefined || v==='') return 0;
+  const {neg,int,dec} = splitNumStr(v);
+  const str = (neg?'-':'') + (int?int:'0') + (dec?'.'+dec:'');
+  const num = Number(str);
+  return isNaN(num)?0:num;
+}
+function getVal(id){ return toNum(document.getElementById(id).value); }
+function setVal(id, v){ const el=document.getElementById(id); el.value = fmtInputString(v); }
+function bindFormatters(){
+  document.querySelectorAll('input.num').forEach(el=>{
+    el.value = fmtInputString(el.value);
+    el.addEventListener('input', ()=>{
+      const before = el.value; const pos = el.selectionStart || before.length;
+      const after = fmtInputString(before);
+      el.value = after;
+      const delta = after.length - before.length;
+      const newPos = Math.max(0, Math.min(after.length, pos + delta));
+      el.setSelectionRange(newPos,newPos);
+    });
+    el.addEventListener('blur', ()=>{ el.value = fmtInputString(el.value); });
+  });
+}
 const npv = (rate, cfs)=> cfs.reduce((acc,cf,t)=> acc + cf/Math.pow(1+rate,t), 0);
 const eacFromNPV = (rate, npv, years)=>{
   if(rate===0) return npv/years; // avoid div by 0
@@ -206,28 +256,28 @@ function buildTables(title, rows){
 function fmt(n){ return (n>=0? '' : '-') + yenFmt(Math.abs(n)); }
 
 function run(){
-  const years = +document.getElementById('years').value;
-  const disc = toRate(document.getElementById('disc').value);
-  const tax = toRate(document.getElementById('tax').value);
-  const vatRate = toRate(document.getElementById('vatRate').value);
-  const vatCreditRatio = toRate(document.getElementById('vatCreditRatio').value);
+  const years = Math.round(getVal('years'));
+  const disc = getVal('disc')/100;
+  const tax = getVal('tax')/100;
+  const vatRate = getVal('vatRate')/100;
+  const vatCreditRatio = getVal('vatCreditRatio')/100;
 
   // Purchase inputs
-  const price = +document.getElementById('buyPrice').value; // ex VAT
-  const life = +document.getElementById('life').value;
-  const debtRatio = toRate(document.getElementById('debtRatio').value);
-  const loanRate = toRate(document.getElementById('loanRate').value);
-  const loanYears = +document.getElementById('loanYears').value;
-  const holding = +document.getElementById('holdingCost').value;
-  const salvage = +document.getElementById('salvage').value;
+  const price = getVal('buyPrice'); // ex VAT
+  const life = Math.round(getVal('life'));
+  const debtRatio = getVal('debtRatio')/100;
+  const loanRate = getVal('loanRate')/100;
+  const loanYears = Math.round(getVal('loanYears'));
+  const holding = getVal('holdingCost');
+  const salvage = getVal('salvage');
 
   // Lease inputs
-  const leasePay = +document.getElementById('leasePay').value;
-  const leaseYears = +document.getElementById('leaseYears').value;
-  const leaseInit = +document.getElementById('leaseInit').value;
-  const leaseBuyout = +document.getElementById('leaseBuyout').value;
+  const leasePay = getVal('leasePay');
+  const leaseYears = Math.round(getVal('leaseYears'));
+  const leaseInit = getVal('leaseInit');
+  const leaseBuyout = getVal('leaseBuyout');
   const leaseVatTiming = document.getElementById('leaseVatTiming').value; // upfront or spread
-  const leaseMaint = +document.getElementById('leaseMaint').value;
+  const leaseMaint = getVal('leaseMaint');
 
   const tablesDiv = document.getElementById('tables');
 
@@ -338,30 +388,30 @@ function run(){
 }
 
 function loadSample(){
-  document.getElementById('years').value=5;
-  document.getElementById('disc').value=3.0;
-  document.getElementById('tax').value=31.0;
-  document.getElementById('vatRate').value=10;
-  document.getElementById('vatCreditRatio').value=100;
-  document.getElementById('buyPrice').value=5_000_000;
-  document.getElementById('life').value=5;
-  document.getElementById('debtRatio').value=100;
-  document.getElementById('loanRate').value=2.0;
-  document.getElementById('loanYears').value=5;
-  document.getElementById('holdingCost').value=100_000;
-  document.getElementById('salvage').value=0;
-  document.getElementById('leasePay').value=1_100_000;
-  document.getElementById('leaseYears').value=5;
-  document.getElementById('leaseInit').value=0;
-  document.getElementById('leaseBuyout').value=0;
+  setVal('years',5);
+  setVal('disc',3.0);
+  setVal('tax',31.0);
+  setVal('vatRate',10);
+  setVal('vatCreditRatio',100);
+  setVal('buyPrice',5_000_000);
+  setVal('life',5);
+  setVal('debtRatio',100);
+  setVal('loanRate',2.0);
+  setVal('loanYears',5);
+  setVal('holdingCost',100_000);
+  setVal('salvage',0);
+  setVal('leasePay',1_100_000);
+  setVal('leaseYears',5);
+  setVal('leaseInit',0);
+  setVal('leaseBuyout',0);
   document.getElementById('leaseVatTiming').value='upfront';
-  document.getElementById('leaseMaint').value=0;
+  setVal('leaseMaint',0);
   run();
 }
 
+bindFormatters();
 document.getElementById('run').addEventListener('click', run);
 document.getElementById('sample').addEventListener('click', loadSample);
-
 // 初回
 loadSample();
 </script>
