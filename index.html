@@ -32,6 +32,16 @@
   th:first-child,td:first-child{text-align:left}
   .footer{font-size:12px;color:var(--muted)}
   .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
+  /* Mobile-first tweaks */
+  .chart{width:100%;height:220px}
+  @media(max-width:839px){
+    main{padding:10px}
+    header h1{font-size:16px}
+    .kpi{grid-template-columns:1fr}
+    .row{grid-template-columns:1fr}
+    .btn{width:100%}
+    input,select{height:48px;font-size:16px}
+  }
 </style>
 </head>
 <body>
@@ -44,23 +54,23 @@
     <div class="grid g2">
       <div>
         <label>分析期間（年）</label>
-        <input type="text" class="num" id="years" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="decimal" id="years" value="5" min="1" step="1">
       </div>
       <div>
         <label>割引率（税引後・%）<span class="muted">　資金の機会費用/WACC など</span></label>
-        <input type="text" class="num" id="disc" value="3.0" step="0.1">
+        <input type="text" class="num" inputmode="decimal" id="disc" value="3.0" step="0.1">
       </div>
       <div>
         <label>実効税率（%）<span class="muted">　法人税・地方法人税・住民税・事業税の合計目安</span></label>
-        <input type="text" class="num" id="tax" value="31.0" step="0.1">
+        <input type="text" class="num" inputmode="decimal" id="tax" value="31.0" step="0.1">
       </div>
       <div>
         <label>消費税率（%）</label>
-        <input type="text" class="num" id="vatRate" value="10" step="0.1">
+        <input type="text" class="num" inputmode="decimal" id="vatRate" value="10" step="0.1">
       </div>
       <div>
         <label>仕入税額控除割合（%）<span class="muted">　原則100%、簡易課税・共通対応は任意%</span></label>
-        <input type="text" class="num" id="vatCreditRatio" value="100" step="1" min="0" max="100">
+        <input type="text" class="num" inputmode="decimal" id="vatCreditRatio" value="100" step="1" min="0" max="100">
       </div>
       <div>
         <label>表記</label>
@@ -77,31 +87,31 @@
     <div class="grid g2">
       <div>
         <label>購入価額（税抜）</label>
-        <input type="text" class="num" id="buyPrice" value="5000000" step="10000">
+        <input type="text" class="num" inputmode="decimal" id="buyPrice" value="5000000" step="10000">
       </div>
       <div>
         <label>耐用年数（年）<span class="muted">　定額法・残存1円で計算</span></label>
-        <input type="text" class="num" id="life" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="decimal" id="life" value="5" min="1" step="1">
       </div>
       <div>
         <label>借入割合（%）</label>
-        <input type="text" class="num" id="debtRatio" value="100" min="0" max="100" step="1">
+        <input type="text" class="num" inputmode="decimal" id="debtRatio" value="100" min="0" max="100" step="1">
       </div>
       <div>
         <label>借入金利（年率%）</label>
-        <input type="text" class="num" id="loanRate" value="2.0" step="0.1">
+        <input type="text" class="num" inputmode="decimal" id="loanRate" value="2.0" step="0.1">
       </div>
       <div>
         <label>借入返済年数（年）<span class="muted">　元利均等</span></label>
-        <input type="text" class="num" id="loanYears" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="decimal" id="loanYears" value="5" min="1" step="1">
       </div>
       <div>
         <label>保有コスト（年額・税抜）<span class="muted">　保守・保険・固定資産税 等</span></label>
-        <input type="text" class="num" id="holdingCost" value="100000" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="holdingCost" value="100000" step="1000">
       </div>
       <div>
         <label>最終処分/売却価額（税抜・+で収入）</label>
-        <input type="text" class="num" id="salvage" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="salvage" value="0" step="1000">
       </div>
     </div>
   </section>
@@ -111,19 +121,19 @@
     <div class="grid g2">
       <div>
         <label>リース料（年額・税抜）</label>
-        <input type="text" class="num" id="leasePay" value="1100000" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leasePay" value="1100000" step="1000">
       </div>
       <div>
         <label>リース年数（年）</label>
-        <input type="text" class="num" id="leaseYears" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="decimal" id="leaseYears" value="5" min="1" step="1">
       </div>
       <div>
         <label>初回費用（税抜）<span class="muted">　保証料・設定費等</span></label>
-        <input type="text" class="num" id="leaseInit" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leaseInit" value="0" step="1000">
       </div>
       <div>
         <label>満了時買取額（税抜・任意）</label>
-        <input type="text" class="num" id="leaseBuyout" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leaseBuyout" value="0" step="1000">
       </div>
       <div>
         <label>消費税控除のタイミング</label>
@@ -134,7 +144,7 @@
       </div>
       <div>
         <label>保守等の付帯費用（年額・税抜）</label>
-        <input type="text" class="num" id="leaseMaint" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leaseMaint" value="0" step="1000">
       </div>
     </div>
   </section>
@@ -161,6 +171,14 @@
       </div>
     </div>
     <p id="verdict" style="font-weight:800"></p>
+<div class="row" style="grid-template-columns:1fr 180px;align-items:center">
+  <span class="muted">グラフ指標</span>
+  <select id="metric">
+    <option value="EAC" selected>等価年額（EAC）</option>
+    <option value="NPC">現在価値（NPC＝純コスト）</option>
+  </select>
+</div>
+<div id="chartArea" class="chart"></div>
   </section>
 
   <section class="card">
@@ -384,6 +402,11 @@ function run(){
   const verdict = ( -buyNPVv < -leaseNPVv ) ? '購入のコスト（NPC/EAC）が小さく、有利と判定しました。' : ( -leaseNPVv < -buyNPVv ) ? 'リースのコスト（NPC/EAC）が小さく、有利と判定しました。' : '両者はほぼ同等です。契約条件の見直しをご検討ください。';
   document.getElementById('verdict').textContent = verdict;
 
+  // グラフ用データ（NPCは純コスト= -NPVで扱う）
+  window._calc = { buyEACv, leaseEACv, buyNPCost: -buyNPVv, leaseNPCost: -leaseNPVv };
+  const metricEl = document.getElementById('metric');
+  if(metricEl) renderChart(metricEl.value);
+
   tablesDiv.innerHTML = buildTables('購入', buyRows) + buildTables('リース', leaseRows);
 }
 
@@ -410,8 +433,11 @@ function loadSample(){
 }
 
 bindFormatters();
+bindFormatters();
 document.getElementById('run').addEventListener('click', run);
 document.getElementById('sample').addEventListener('click', loadSample);
+const metricEl = document.getElementById('metric');
+if(metricEl){ metricEl.addEventListener('change', ()=> renderChart(metricEl.value)); }
 // 初回
 loadSample();
 </script>
