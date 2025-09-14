@@ -3,57 +3,48 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>購入 vs リース 判定ツール（r1）</title>
+<title>購入 vs リース 判定ツール（r7）</title>
 <style>
   :root{
     --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46;
   }
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif;}
-  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:10px 14px;z-index:5}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif;}
+  body{overflow-x:hidden}
+  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:12px 14px;z-index:5}
   header h1{font-size:18px;margin:0}
   main{padding:12px;display:grid;gap:12px;max-width:1100px;margin:0 auto}
-  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 16px rgba(2,6,23,.06);padding:12px}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 16px rgba(2,6,23,.06);padding:12px;margin:0}
   .grid{display:grid;gap:10px}
-  .g2{grid-template-columns:1fr} @media(min-width:840px){.g2{grid-template-columns:1fr 1fr}}
+  .g2{grid-template-columns:1fr}
+  @media(min-width:840px){.g2{grid-template-columns:1fr 1fr}}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
-  input,select{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;font-size:16px}
-  .row{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center}
-  .row span.hint{font-size:12px;color:var(--muted)}
+  input,select{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;font-size:16px}
+  input.num{font-variant-numeric:tabular-nums}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+  .row.metric{grid-template-columns:1fr}
+  @media(min-width:520px){ .row.metric{grid-template-columns:1fr 180px;} }
   .title{font-weight:700;margin:4px 0 8px}
   .muted{color:var(--muted)}
-  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700}
+  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;justify-content:center}
   .btn.secondary{background:#0f172a}
-  .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:720px){.kpi{grid-template-columns:1fr 1fr}}
   .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:10px}
   .pos{color:var(--good);font-weight:800}
   .neg{color:var(--bad);font-weight:800}
-  table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1}
-  th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:right}
+  table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;display:block;overflow-x:auto}
+  th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
   .footer{font-size:12px;color:var(--muted)}
   .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
-  /* Mobile-first tweaks */
-  .chart{width:100%;height:220px}
-  @media(max-width:839px){
-    main{padding:10px}
-    header h1{font-size:16px}
-    .kpi{grid-template-columns:1fr}
-    .row{grid-template-columns:1fr}
-    .btn{width:100%}
-    input,select{height:48px;font-size:16px}
-  }
-  /* Mobile polish */
-  body{overflow-x:hidden}
-  svg, img, canvas{max-width:100%;height:auto}
-  table{display:block;overflow-x:auto}
-  .card{margin:0}
-  .row.metric{grid-template-columns:1fr;align-items:center}
-  @media(min-width:520px){ .row.metric{grid-template-columns:1fr 180px;} }
+  .chart{width:100%;height:240px}
+  svg,img,canvas{max-width:100%;height:auto}
 </style>
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r1）</h1>
+  <h1>購入 vs リース 判定ツール（r7）</h1>
 </header>
 <main>
   <section class="card">
@@ -61,23 +52,23 @@
     <div class="grid g2">
       <div>
         <label>分析期間（年）</label>
-        <input type="text" class="num" inputmode="decimal" id="years" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="numeric" id="years" value="5" data-decimals="0">
       </div>
       <div>
         <label>割引率（税引後・%）<span class="muted">　資金の機会費用/WACC など</span></label>
-        <input type="text" class="num" inputmode="decimal" id="disc" value="3.0" step="0.1">
+        <input type="text" class="num" inputmode="decimal" id="disc" value="3.00" data-decimals="2">
       </div>
       <div>
-        <label>実効税率（%）<span class="muted">　法人税・地方法人税・住民税・事業税の合計目安</span></label>
-        <input type="text" class="num" inputmode="decimal" id="tax" value="31.0" step="0.1">
+        <label>実効税率（%）</label>
+        <input type="text" class="num" inputmode="decimal" id="tax" value="31.00" data-decimals="2">
       </div>
       <div>
         <label>消費税率（%）</label>
-        <input type="text" class="num" inputmode="decimal" id="vatRate" value="10" step="0.1">
+        <input type="text" class="num" inputmode="decimal" id="vatRate" value="10.00" data-decimals="2">
       </div>
       <div>
         <label>仕入税額控除割合（%）<span class="muted">　原則100%、簡易課税・共通対応は任意%</span></label>
-        <input type="text" class="num" inputmode="decimal" id="vatCreditRatio" value="100" step="1" min="0" max="100">
+        <input type="text" class="num" inputmode="decimal" id="vatCreditRatio" value="100.00" data-decimals="2">
       </div>
       <div>
         <label>表記</label>
@@ -94,15 +85,15 @@
     <div class="grid g2">
       <div>
         <label>購入価額（税抜）</label>
-        <input type="text" class="num" inputmode="decimal" id="buyPrice" value="5000000" step="10000">
+        <input type="text" class="num" inputmode="decimal" id="buyPrice" value="5,000,000" data-decimals="0">
       </div>
       <div>
         <label>耐用年数（年）<span class="muted">　定額法・残存1円で計算</span></label>
-        <input type="text" class="num" inputmode="decimal" id="life" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="numeric" id="life" value="5" data-decimals="0">
       </div>
       <div>
         <label>借入割合（%）</label>
-        <input type="text" class="num" inputmode="decimal" id="debtRatio" value="100" min="0" max="100" step="1">
+        <input type="text" class="num" inputmode="decimal" id="debtRatio" value="100.00" data-decimals="2">
       </div>
       <div>
         <label>借入金利（年率%）</label>
@@ -110,15 +101,15 @@
       </div>
       <div>
         <label>借入返済年数（年）<span class="muted">　元利均等</span></label>
-        <input type="text" class="num" inputmode="decimal" id="loanYears" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="numeric" id="loanYears" value="5" data-decimals="0">
       </div>
       <div>
         <label>保有コスト（年額・税抜）<span class="muted">　保守・保険・固定資産税 等</span></label>
-        <input type="text" class="num" inputmode="decimal" id="holdingCost" value="100000" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="holdingCost" value="100,000" data-decimals="0">
       </div>
       <div>
         <label>最終処分/売却価額（税抜・+で収入）</label>
-        <input type="text" class="num" inputmode="decimal" id="salvage" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="salvage" value="0" data-decimals="0">
       </div>
     </div>
   </section>
@@ -128,19 +119,19 @@
     <div class="grid g2">
       <div>
         <label>リース料（年額・税抜）</label>
-        <input type="text" class="num" inputmode="decimal" id="leasePay" value="1100000" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leasePay" value="1,100,000" data-decimals="0">
       </div>
       <div>
         <label>リース年数（年）</label>
-        <input type="text" class="num" inputmode="decimal" id="leaseYears" value="5" min="1" step="1">
+        <input type="text" class="num" inputmode="numeric" id="leaseYears" value="5" data-decimals="0">
       </div>
       <div>
         <label>初回費用（税抜）<span class="muted">　保証料・設定費等</span></label>
-        <input type="text" class="num" inputmode="decimal" id="leaseInit" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leaseInit" value="0" data-decimals="0">
       </div>
       <div>
         <label>満了時買取額（税抜・任意）</label>
-        <input type="text" class="num" inputmode="decimal" id="leaseBuyout" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leaseBuyout" value="0" data-decimals="0">
       </div>
       <div>
         <label>消費税控除のタイミング</label>
@@ -151,7 +142,7 @@
       </div>
       <div>
         <label>保守等の付帯費用（年額・税抜）</label>
-        <input type="text" class="num" inputmode="decimal" id="leaseMaint" value="0" step="1000">
+        <input type="text" class="num" inputmode="decimal" id="leaseMaint" value="0" data-decimals="0">
       </div>
     </div>
   </section>
@@ -178,14 +169,15 @@
       </div>
     </div>
     <p id="verdict" style="font-weight:800"></p>
-<div class="row metric">
-  <span class="muted">グラフ指標</span>
-  <select id="metric">
-    <option value="EAC" selected>等価年額（EAC）</option>
-    <option value="NPC">現在価値（NPC＝純コスト）</option>
-  </select>
-</div>
-<div id="chartArea" class="chart"></div>
+    <div id="crossover" class="muted"></div>
+    <div class="row metric">
+      <span class="muted">グラフ指標</span>
+      <select id="metric">
+        <option value="EAC" selected>等価年額（EAC）</option>
+        <option value="NPC">現在価値（NPC＝純コスト）</option>
+      </select>
+    </div>
+    <div id="chartArea" class="chart"></div>
   </section>
 
   <section class="card">
@@ -194,18 +186,19 @@
   </section>
 
   <section class="footer card">
-    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r1</div>
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r7</div>
   </section>
 </main>
 
 <script>
+// ====== フォーマット & 入力補助 ======
 const fmtChoice = ()=>document.getElementById('fmt').value;
 const yenFmt = n=>{
   if(fmtChoice()==='auto') return (n/10000).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 万円';
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 円';
 };
 const toRate = v => Number(v)/100;
-// --- リアルタイム・カンマ入力サポート（正規表現を使わない実装） ---
+
 function splitNumStr(s){
   s = (s==null? '' : String(s));
   let neg = false; if(s.startsWith('-')){ neg = true; s = s.slice(1); }
@@ -232,10 +225,6 @@ function fmtInputString(v, maxDec){
   if(typeof maxDec === 'number') d = dec.slice(0, maxDec);
   let s = thousands(int);
   if(d) s += '.' + d;
-  return (neg?'-':'') + s;
-} = splitNumStr(v);
-  let s = thousands(int);
-  if(dec) s += '.' + dec;
   return (neg?'-':'') + s;
 }
 function toNum(v){
@@ -265,51 +254,15 @@ function bindFormatters(){
     });
     el.addEventListener('blur', ()=>{ el.value = fmtInputString(el.value, decs); });
   });
-});
-    el.addEventListener('blur', ()=>{ el.value = fmtInputString(el.value); });
-  });
 }
+
+// ====== 共通計算関数 ======
 const npv = (rate, cfs)=> cfs.reduce((acc,cf,t)=> acc + cf/Math.pow(1+rate,t), 0);
-const eacFromNPV = (rate, npv, years)=>{
-  if(rate===0) return npv/years; // avoid div by 0
-  const ann = rate * npv / (1 - Math.pow(1+rate,-years));
+const eacFromNPV = (rate, npvVal, years)=>{
+  if(rate===0) return npvVal/years; // avoid div by 0
+  const ann = rate * npvVal / (1 - Math.pow(1+rate,-years));
   return ann;
 }
-
-// —— 判定グラフ描画（SVG） ——
-function renderChart(metric){
-  const el = document.getElementById('chartArea');
-  if(!el || !window._calc){ return; }
-  const {buyEACv, leaseEACv, buyNPCost, leaseNPCost} = window._calc;
-  const a = (metric==='NPC')? buyNPCost : buyEACv;
-  const b = (metric==='NPC')? leaseNPCost : leaseEACv;
-  const w = el.clientWidth || 360, h = 220, pad = 36, barW = 76, gap = 64;
-  const min = Math.min(0, a, b), max = Math.max(0, a, b);
-  const innerH = h - pad*2;
-  const yFromVal = (v)=>{
-    if(max===min) return h/2; // avoid div by 0
-    const y0 = pad + innerH * (max/(max-min)); // zero line
-    return y0 - (v/(max-min))*innerH;
-  }
-  const y0 = yFromVal(0);
-  const x1 = (w - (2*barW + gap))/2; const x2 = x1 + barW + gap;
-  const bar = (x,val)=>{
-    const y = yFromVal(val);
-    const yTop = Math.min(y,y0), yBot = Math.max(y,y0); const hh = Math.max(2, yBot - yTop);
-    return `<rect x="${x}" y="${yTop}" width="${barW}" height="${hh}" rx="8" fill="#7aa4b4"></rect>`;
-  }
-  const svg = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">
-    <line x1="${pad}" y1="${y0}" x2="${w-pad}" y2="${y0}" stroke="#cbd5e1" stroke-width="1" />
-    ${bar(x1,a)}
-    ${bar(x2,b)}
-    <text x="${x1+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">購入</text>
-    <text x="${x2+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">リース</text>
-    <text x="${x1+barW/2}" y="${Math.min(yFromVal(a), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(a)}</text>
-    <text x="${x2+barW/2}" y="${Math.min(yFromVal(b), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(b)}</text>
-  </svg>`;
-  el.innerHTML = svg;
-}
-
 function amortization(loan, rate, nYears){
   // yearly annuity schedule (end of year payments)
   const r = rate; const n = nYears; const pay = r===0? loan/n : loan * (r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);
@@ -329,6 +282,65 @@ function buildTables(title, rows){
 }
 function fmt(n){ return (n>=0? '' : '-') + yenFmt(Math.abs(n)); }
 
+// —— 判定グラフ描画（SVG） ——
+function renderChart(metric){
+  const el = document.getElementById('chartArea');
+  if(!el || !window._calc){ return; }
+  const {buyEACv, leaseEACv, buyNPCost, leaseNPCost} = window._calc;
+  const a = (metric==='NPC')? buyNPCost : buyEACv;
+  const b = (metric==='NPC')? leaseNPCost : leaseEACv;
+  const draw = ()=>{
+    const w = Math.max(280, el.getBoundingClientRect().width || el.clientWidth || 360);
+    const h = 240, pad = 36, barW = Math.min(120, Math.max(60, Math.floor((w-2*pad)/5)) ), gap = Math.round(barW*0.9);
+    const min = Math.min(0, a, b), max = Math.max(0, a, b);
+    const innerH = h - pad*2;
+    const yFromVal = (v)=>{
+      if(max===min) return h/2; // avoid div by 0
+      const y0 = pad + innerH * (max/(max-min)); // zero line
+      return y0 - (v/(max-min))*innerH;
+    }
+    const y0 = yFromVal(0);
+    const x1 = (w - (2*barW + gap))/2; const x2 = x1 + barW + gap;
+    const bar = (x,val)=>{
+      const yy = yFromVal(val);
+      const yTop = Math.min(yy,y0), yBot = Math.max(yy,y0); const hh = Math.max(2, yBot - yTop);
+      return `<rect x="${x}" y="${yTop}" width="${barW}" height="${hh}" rx="10" fill="#7aa4b4"></rect>`;
+    }
+    const svg = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">
+      <line x1="${pad}" y1="${y0}" x2="${w-pad}" y2="${y0}" stroke="#cbd5e1" stroke-width="1" />
+      ${bar(x1,a)}
+      ${bar(x2,b)}
+      <text x="${x1+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">購入</text>
+      <text x="${x2+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">リース</text>
+      <text x="${x1+barW/2}" y="${Math.min(yFromVal(a), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(a)}</text>
+      <text x="${x2+barW/2}" y="${Math.min(yFromVal(b), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(b)}</text>
+    </svg>`;
+    el.innerHTML = svg;
+  };
+  // 幅0対策：複数回リトライ
+  if((el.getBoundingClientRect().width||0) < 10){
+    requestAnimationFrame(()=> setTimeout(draw, 0));
+    setTimeout(draw, 60);
+  } else {
+    draw();
+  }
+}
+
+function computeCrossover(buyRows, leaseRows, disc){
+  const years = buyRows.length - 1;
+  const pvCostTo = (rows, upto)=>{
+    let s=0; for(let t=0;t<=upto;t++){ s += rows[t].total / Math.pow(1+disc, t); } return -s; // 純コスト
+  };
+  const winnerAt = (y)=> pvCostTo(buyRows,y) <= pvCostTo(leaseRows,y) ? '購入' : 'リース';
+  const finalWinner = winnerAt(years);
+  let flip = null;
+  for(let y=0;y<=years;y++){
+    if(winnerAt(y) !== finalWinner){ flip = y; break; }
+  }
+  return {flipYear: flip, finalWinner, horizon: years};
+}
+
+// ====== メイン計算 ======
 function run(){
   const years = Math.round(getVal('years'));
   const disc = getVal('disc')/100;
@@ -364,35 +376,26 @@ function run(){
   for(let y=0;y<=years;y++){
     let ocf=0, capex=0, fin=0, taxShield=0, vat=0;
     if(y===0){
-      // initial cash out: price + VAT (if not fully creditable instantly)
       const vatCash = price*vatRate; // paid at purchase
-      // VAT credit in same period (assume同課税期間)
       vat = + vatCash * vatCreditRatio; // inflow (credit)
       capex = - (price + vatCash);
-      if(loanAmt>0){ fin += loanAmt; } // loan proceeds inflow
+      if(loanAmt>0){ fin += loanAmt; }
     } else {
-      // yearly operations
       const yearHolding = holding; // expense (deductible)
       const depExp = y<=life ? dep : 0; // deductible
-      const taxBaseImpact = -yearHolding - depExp; // expenses reduce tax base
+      const taxBaseImpact = -yearHolding - depExp;
       taxShield = - (taxBaseImpact) * tax; // tax reduction is positive CF
-
       ocf = - yearHolding; // cash for holding
-
-      // loan payments within loanYears
       if(y<=loan.rows.length){
         const r = loan.rows[y-1];
         fin -= r.pay; // cash out
-        // tax shield for interest
-        taxShield += r.interest * tax;
+        taxShield += r.interest * tax; // interest shield
       }
-      // salvage at end of horizon
       if(y===years && salvage!==0){
-        ocf += salvage; // ignore tax on gain/loss (model簡略)
-        // VAT on sale (if taxable)
-        const salvageVAT = salvage*vatRate; // buyer pays VAT to us; not modeled to P&L; assume入金
-        ocf += salvageVAT; // inflow
-        vat -= salvageVAT*vatCreditRatio; // output tax reduces net VAT credit (簡略)
+        ocf += salvage;
+        const salvageVAT = salvage*vatRate; // 入金（簡略）
+        ocf += salvageVAT;
+        vat -= salvageVAT*vatCreditRatio; // output tax 影響（簡略）
       }
     }
     const total = ocf + capex + taxShield + vat + fin;
@@ -400,7 +403,7 @@ function run(){
     cfs.push(total);
   }
   const buyNPVv = npv(disc, cfs);
-  const buyEACv = eacFromNPV(disc, -buyNPVv, years); // costs positive → show as cost
+  const buyEACv = eacFromNPV(disc, -buyNPVv, years); // costs正方向
 
   // ---------------- Lease scenario -----------------
   const leaseRows=[]; cfs=[];
@@ -413,27 +416,21 @@ function run(){
         vat = vatCash*vatCreditRatio; // credit
       }
       if(leaseVatTiming==='upfront'){
-        // upfront credit on total payments expected within lease term (税務の原則を近似)
-        const totalLeaseBase = leasePay*Math.min(leaseYears, years) + leaseBuyout;
+        const totalLeaseBase = leasePay*Math.min(leaseYears, years) + leaseBuyout + leaseMaint*Math.min(leaseYears, years);
         const vatCashAll = totalLeaseBase * vatRate;
-        // 現金の実支出は都度だが、控除のみ upfront に認識（近似）
-        vat += vatCashAll * vatCreditRatio;
+        vat += vatCashAll * vatCreditRatio; // 控除のみ前倒し（近似）
       }
     } else {
       if(y<=leaseYears){
         const base = leasePay;
         const vatCash = base*vatRate;
         ocf -= base; // lease payment (税抜)
-        // tax shield: lease expense deductible
-        taxShield += base * tax;
-        if(leaseVatTiming==='spread'){
-          vat += vatCash * vatCreditRatio; // credit when paid
-        }
+        taxShield += base * tax; // 損金
+        if(leaseVatTiming==='spread') vat += vatCash * vatCreditRatio;
       }
       if(y===leaseYears && leaseBuyout>0){
         const vatCash = leaseBuyout*vatRate;
         ocf -= leaseBuyout;
-        // tax shield: buyoutは資産取得のため損金算入されない（簡略→ここでは損金なし）
         if(leaseVatTiming==='spread') vat += vatCash * vatCreditRatio;
       }
       if(leaseMaint>0){
@@ -449,34 +446,49 @@ function run(){
   const leaseNPVv = npv(disc, cfs);
   const leaseEACv = eacFromNPV(disc, -leaseNPVv, years);
 
-  // write
+  // 出力
   document.getElementById('buyNPV').textContent = (buyNPVv>=0? '' : '-') + yenFmt(Math.abs(buyNPVv));
   document.getElementById('leaseNPV').textContent = (leaseNPVv>=0? '' : '-') + yenFmt(Math.abs(leaseNPVv));
   document.getElementById('buyEAC').textContent = yenFmt(buyEACv);
   document.getElementById('leaseEAC').textContent = yenFmt(leaseEACv);
 
   const verdict = ( -buyNPVv < -leaseNPVv ) ? '購入のコスト（NPC/EAC）が小さく、有利と判定しました。' : ( -leaseNPVv < -buyNPVv ) ? 'リースのコスト（NPC/EAC）が小さく、有利と判定しました。' : '両者はほぼ同等です。契約条件の見直しをご検討ください。';
-  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('verdict').textContent = verdict + `（分析期間：${years}年）`;
 
-  // 明細テーブルを先に描画
+  // 明細テーブル（先に描画）
+  const tablesDiv = document.getElementById('tables');
   tablesDiv.innerHTML = buildTables('購入', buyRows) + buildTables('リース', leaseRows);
 
-  // グラフ用データ（NPCは純コスト= -NPVで扱う）
+  // 逆転年
+  const cross = computeCrossover(buyRows, leaseRows, disc);
+  let ctext = '';
+  if(cross.flipYear===null){
+    ctext = `分析期間（${cross.horizon}年）内に逆転はありません（${cross.finalWinner}有利が継続）。`;
+  } else {
+    const other = cross.finalWinner === '購入' ? 'リース' : '購入';
+    ctext = `逆転年：${cross.flipYear}年目（逆転前：${other}有利 → 逆転後：${cross.finalWinner}有利）`;
+  }
+  const cx = document.getElementById('crossover'); if(cx) cx.textContent = ctext;
+
+  // グラフ用データ
   window._calc = { buyEACv, leaseEACv, buyNPCost: -buyNPVv, leaseNPCost: -leaseNPVv };
   const metricEl = document.getElementById('metric');
-  if(metricEl){ setTimeout(()=>renderChart(metricEl.value), 0); }
+  if(metricEl){
+    requestAnimationFrame(()=>renderChart(metricEl.value));
+    setTimeout(()=>renderChart(metricEl.value), 60);
+  }
 }
 
 function loadSample(){
   setVal('years',5);
-  setVal('disc',3.0);
-  setVal('tax',31.0);
-  setVal('vatRate',10);
-  setVal('vatCreditRatio',100);
+  setVal('disc',3.00);
+  setVal('tax',31.00);
+  setVal('vatRate',10.00);
+  setVal('vatCreditRatio',100.00);
   setVal('buyPrice',5_000_000);
   setVal('life',5);
-  setVal('debtRatio',100);
-  setVal('loanRate',2.0);
+  setVal('debtRatio',100.00);
+  setVal('loanRate',2.00);
   setVal('loanYears',5);
   setVal('holdingCost',100_000);
   setVal('salvage',0);
@@ -489,9 +501,10 @@ function loadSample(){
   run();
 }
 
+// ====== 起動処理 ======
 window.addEventListener('load', ()=>{
   bindFormatters();
-  const renderNow = ()=>{ const m = (document.getElementById('metric')||{}).value || 'EAC'; setTimeout(()=>renderChart(m),0); };
+  const renderNow = ()=>{ const m = (document.getElementById('metric')||{}).value || 'EAC'; requestAnimationFrame(()=>renderChart(m)); setTimeout(()=>renderChart(m),60); };
   const onRun = ()=>{ run(); renderNow(); };
   document.getElementById('run').addEventListener('click', onRun);
   document.getElementById('sample').addEventListener('click', ()=>{ loadSample(); renderNow(); });
@@ -501,14 +514,6 @@ window.addEventListener('load', ()=>{
   // 初回
   loadSample();
   renderNow();
-});
-  const onRun = ()=>{ run(); const m = (document.getElementById('metric')||{}).value || 'EAC'; setTimeout(()=>renderChart(m), 0); };
-  document.getElementById('run').addEventListener('click', onRun);
-  document.getElementById('sample').addEventListener('click', ()=>{ loadSample(); const m=(document.getElementById('metric')||{}).value || 'EAC'; setTimeout(()=>renderChart(m),0); });
-  const metricEl = document.getElementById('metric');
-  if(metricEl){ metricEl.addEventListener('change', ()=> renderChart(metricEl.value)); }
-  // 初回
-  loadSample();
 });
 </script>
 </body>
