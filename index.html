@@ -4,56 +4,59 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#5b8aa3"/>
-<title>購入 vs リース 判定ツール（r17）</title>
+<title>購入 vs リース 判定ツール（r18）</title>
 <style>
   :root{ --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46; }
   *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif}
   body{overflow-x:hidden}
-  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:12px 14px;z-index:20}
+  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:10px 12px;z-index:20}
   header h1{font-size:18px;margin:0}
-  main{padding:12px;display:grid;gap:12px;max-width:1100px;margin:0 auto}
-  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 16px rgba(2,6,23,.06);padding:12px;margin:0}
-  .grid{display:grid;gap:10px}
+  main{padding:10px;display:grid;gap:10px;max-width:1100px;margin:0 auto}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 16px rgba(2,6,23,.06);padding:10px;margin:0}
+  .grid{display:grid;gap:8px}
   .g2{grid-template-columns:1fr}
   @media(min-width:840px){.g2{grid-template-columns:1fr 1fr}}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
-  input,select{width:100%;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;font-size:16px}
+  input,select{width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;font-size:16px}
   input.num{font-variant-numeric:tabular-nums}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
   .row.metric{grid-template-columns:1fr}
   @media(min-width:520px){ .row.metric{grid-template-columns:1fr 180px;} }
-  .title{font-weight:700;margin:4px 0 8px}
+  .title{font-weight:700;margin:2px 0 6px;font-size:14px}
   .muted{color:var(--muted)}
-  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:14px 18px;border-radius:14px;font-weight:700;justify-content:center;font-size:16px}
+  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:14px 16px;border-radius:14px;font-weight:700;justify-content:center;font-size:16px;width:100%}
   .btn.secondary{background:#0f172a}
-  .kpi{display:grid;grid-template-columns:1fr;gap:10px}
+  .kpi{display:grid;grid-template-columns:1fr;gap:8px}
   @media(min-width:720px){.kpi{grid-template-columns:1fr 1fr}}
-  .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:10px}
+  .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:8px}
   /* 明細だけ横スクロール */
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;width:auto;max-width:none;display:table}
-  th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap}
+  th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap;font-size:13px}
   th:first-child,td:first-child{text-align:left}
   .footer{font-size:12px;color:var(--muted)}
-  .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
-  .chart{width:100%;height:240px}
+  .pill{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
+  .chart{width:100%;height:220px;margin-left:0}
   svg,img,canvas{max-width:100%;height:auto}
-  pre{white-space:pre-wrap;background:#0f172a10;border:1px dashed #cbd5e1;padding:10px;border-radius:10px}
+  pre{white-space:pre-wrap;background:#0f172a10;border:1px dashed #cbd5e1;padding:8px;border-radius:10px;font-size:12px}
   /* === モバイル最適化 === */
   @media(max-width:640px){
-    .chart{height:200px}
+    html{font-size:15px}
+    header h1{font-size:15px}
+    .chart{height:170px}
     #runbar{position:sticky;bottom:0;z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(6px);background:rgba(255,255,255,.92);box-shadow:0 -6px 16px rgba(15,23,42,.10)}
-    .btn{padding:16px 18px;font-size:17px;border-radius:16px}
-    header h1{font-size:16px}
+    .btn{padding:16px 16px;font-size:16px;border-radius:16px}
     /* 入力幅をスマホ向けに狭める（中央寄せ） */
-    .card input,.card select{max-width:320px;width:100%;margin-left:auto;margin-right:auto}
+    .card input,.card select{max-width:300px;width:100%;margin-left:auto;margin-right:auto}
+    .kpi .box div{font-size:13px}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r17）</h1>
+  <h1>購入 vs リース 判定ツール（r18）</h1>
 </header>
 <main>
   <section class="card">
@@ -195,7 +198,7 @@
   </section>
 
   <section class="card">
-    <div class="title">開発者テスト（r17）</div>
+    <div class="title">開発者テスト（r18）</div>
     <div class="grid g2">
       <button class="btn" id="runTests">自己診断を実行</button>
       <div class="muted">※機能は本体に影響しません。結果は下のログに表示されます。</div>
@@ -205,7 +208,7 @@
   </section>
 
   <section class="footer card">
-    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r17</div>
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r18</div>
   </section>
 
   <section class="card" id="actions">
@@ -269,16 +272,18 @@ function amortization(loan,rate,nYears){ var n=Math.max(1,Math.round(nYears)); v
 function fmt(n){ return (n>=0?'':'-')+yenFmt(Math.abs(n)); }
 function buildTables(title,rows){ var th='<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>'; var trs=''; for(var i=0;i<rows.length;i++){ var r=rows[i]; trs+= '<tr><td>'+r.year+'</td><td>'+fmt(r.ocf)+'</td><td>'+fmt(r.capex)+'</td><td>'+fmt(r.tax)+'</td><td>'+fmt(r.vat)+'</td><td>'+fmt(r.fin)+'</td><td><b>'+fmt(r.total)+'</b></td></tr>'; } return '<h3 style="margin:8px 0">'+title+'</h3><div class="table-scroll"><table>'+th+trs+'</table></div>'; }
 
-// —— 判定グラフ描画（SVG） ——
+// —— 判定グラフ描画（SVG・左寄せ） ——
 function renderChart(metric){ var el=byId('chartArea'); if(!el||!window._calc){return;} var a,b; if(metric==='NPC'){ a=window._calc.buyNPCost; b=window._calc.leaseNPCost; } else { a=window._calc.buyEACv; b=window._calc.leaseEACv; }
-  function draw(){ var w=Math.max(280,(el.getBoundingClientRect().width||el.clientWidth||360)); var h=240,pad=36,barW=Math.min(120,Math.max(60,Math.floor((w-2*pad)/5))),gap=Math.round(barW*0.9); var min=Math.min(0,a,b),max=Math.max(0,a,b); var innerH=h-pad*2; function yFromVal(v){ if(max===min) return h/2; var y0=pad+innerH*(max/(max-min)); return y0-(v/(max-min))*innerH; } var y0=yFromVal(0); var x1=(w-(2*barW+gap))/2; var x2=x1+barW+gap; function bar(x,val){ var yy=yFromVal(val); var yTop=Math.min(yy,y0),yBot=Math.max(yy,y0); var hh=Math.max(2,yBot-yTop); return '<rect x="'+x+'" y="'+yTop+'" width="'+barW+'" height="'+hh+'" rx="10" fill="#7aa4b4"></rect>'; }
-    var svg='<svg width="100%" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">'
+  function draw(){ var w=Math.max(260,(el.getBoundingClientRect().width||el.clientWidth||360)); var h=(window.innerWidth<=640)?170:220; var pad=(window.innerWidth<=640)?24:36; var avail=w-2*pad; var gapMin=12; var barW=Math.max(44, Math.floor((avail-gapMin)/2)); var gap=Math.max(gapMin, Math.floor(barW*0.6)); if(2*barW+gap>avail){ barW=Math.max(40, Math.floor((avail-gap)/2)); }
+    var min=Math.min(0,a,b),max=Math.max(0,a,b); var innerH=h-pad*2; function yFromVal(v){ if(max===min) return h/2; var y0=pad+innerH*(max/(max-min)); return y0-(v/(max-min))*innerH; } var y0=yFromVal(0); var x1=pad; var x2=pad+barW+gap; function bar(x,val){ var yy=yFromVal(val); var yTop=Math.min(yy,y0),yBot=Math.max(yy,y0); var hh=Math.max(2,yBot-yTop); return '<rect x="'+x+'" y="'+yTop+'" width="'+barW+'" height="'+hh+'" rx="8" fill="#7aa4b4"></rect>'; }
+    var fontSmall=(window.innerWidth<=640)?11:12;
+    var svg='<svg width="100%" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="xMinYMin meet" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">'
       +'<line x1="'+pad+'" y1="'+y0+'" x2="'+(w-pad)+'" y2="'+y0+'" stroke="#cbd5e1" stroke-width="1" />'
       + bar(x1,a) + bar(x2,b)
-      +'<text x="'+(x1+barW/2)+'" y="'+(y0+16)+'" text-anchor="middle" font-size="12" fill="#475569">購入</text>'
-      +'<text x="'+(x2+barW/2)+'" y="'+(y0+16)+'" text-anchor="middle" font-size="12" fill="#475569">リース</text>'
-      +'<text x="'+(x1+barW/2)+'" y="'+(Math.min(yFromVal(a),y0)-8)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">'+yenFmt(a)+'</text>'
-      +'<text x="'+(x2+barW/2)+'" y="'+(Math.min(yFromVal(b),y0)-8)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">'+yenFmt(b)+'</text>'
+      +'<text x="'+(x1+barW/2)+'" y="'+(y0+14)+'" text-anchor="middle" font-size="'+fontSmall+'" fill="#475569">購入</text>'
+      +'<text x="'+(x2+barW/2)+'" y="'+(y0+14)+'" text-anchor="middle" font-size="'+fontSmall+'" fill="#475569">リース</text>'
+      +'<text x="'+(x1+barW/2)+'" y="'+(Math.min(yFromVal(a),y0)-6)+'" text-anchor="middle" font-size="'+fontSmall+'" font-weight="700" fill="#0f172a">'+yenFmt(a)+'</text>'
+      +'<text x="'+(x2+barW/2)+'" y="'+(Math.min(yFromVal(b),y0)-6)+'" text-anchor="middle" font-size="'+fontSmall+'" font-weight="700" fill="#0f172a">'+yenFmt(b)+'</text>'
       +'</svg>';
     el.innerHTML=svg;
   }
@@ -384,7 +389,7 @@ function loadSample(){ try{
 // ====== 出力ユーティリティ ======
 function csvEscape(v){ if(v==null) return ""; var s=String(v); return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function buildCSVString(rowsObj){ var buyRows=rowsObj.buyRows; var leaseRows=rowsObj.leaseRows; var lines=['Scenario,Year,OCF,CAPEX,Tax,VAT,Financing,Total']; function pushRows(name,rows){ for(var i=0;i<rows.length;i++){ var r=rows[i]; lines.push([name,r.year,r.ocf,r.capex,r.tax,r.vat,r.fin,r.total].map(csvEscape).join(',')); } } pushRows('購入',buyRows); pushRows('リース',leaseRows); return '\uFEFF'+lines.join('\n'); }
-function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r17_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r18_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 function copyResult(){ var verdictEl=byId('verdict'); var buyNPVEl=byId('buyNPV'); var leaseNPVEl=byId('leaseNPV'); var buyEACEl=byId('buyEAC'); var leaseEACEl=byId('leaseEAC'); var crossEl=byId('crossover'); var text=['【判定】', verdictEl?verdictEl.textContent:'', '購入 NPC/EAC: '+(buyNPVEl?buyNPVEl.textContent:'')+' / '+(buyEACEl?buyEACEl.textContent:''), 'リース NPC/EAC: '+(leaseNPVEl?leaseNPVEl.textContent:'')+' / '+(leaseEACEl?leaseEACEl.textContent:''), (crossEl?crossEl.textContent:'')].join('\n'); try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ alert('判定結果をコピーしました'); }, function(){ alert(text); }); } else { throw new Error('no clipboard'); } } catch(e){ alert(text); } }
 
 // ====== テスト ======
@@ -427,7 +432,6 @@ function initApp(){ if(window._inited) return; window._inited=true; try{
 
 document.addEventListener('DOMContentLoaded', initApp);
 window.addEventListener('load', initApp);
-// 予備: 何らかの理由でイベントが飛ばない環境向けのフォールバック
 setTimeout(function(){ if(!window._inited){ initApp(); } }, 500);
 </script>
 </body>
