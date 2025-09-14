@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#5b8aa3"/>
-<title>購入 vs リース 判定ツール（r14）</title>
+<title>購入 vs リース 判定ツール（r15）</title>
 <style>
   :root{ --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46; }
   *{box-sizing:border-box}
@@ -44,12 +44,18 @@
     #runbar{position:sticky;bottom:0;z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(6px);background:rgba(255,255,255,.92);box-shadow:0 -6px 16px rgba(15,23,42,.10)}
     .btn{padding:16px 18px;font-size:17px;border-radius:16px}
     header h1{font-size:16px}
+    /* 入力幅をスマホ向けに狭める（中央寄せ） */
+    .card input,.card select{max-width:320px;width:100%;margin-left:auto;margin-right:auto}
+  }
+    #runbar{position:sticky;bottom:0;z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(6px);background:rgba(255,255,255,.92);box-shadow:0 -6px 16px rgba(15,23,42,.10)}
+    .btn{padding:16px 18px;font-size:17px;border-radius:16px}
+    header h1{font-size:16px}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r14）</h1>
+  <h1>購入 vs リース 判定ツール（r15）</h1>
 </header>
 <main>
   <section class="card">
@@ -115,6 +121,39 @@
       <div>
         <label>最終処分/売却価額（税抜・+で収入）</label>
         <input type="text" class="num" inputmode="decimal" id="salvage" value="0" data-decimals="0">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="title">リースシナリオ</div>
+    <div class="grid g2">
+      <div>
+        <label>リース料（年額・税抜）</label>
+        <input type="text" class="num" inputmode="decimal" id="leasePay" value="1,100,000" data-decimals="0">
+      </div>
+      <div>
+        <label>リース年数（年）</label>
+        <input type="text" class="num" inputmode="numeric" id="leaseYears" value="5" data-decimals="0">
+      </div>
+      <div>
+        <label>初回費用（税抜）<span class="muted">　保証料・設定費等</span></label>
+        <input type="text" class="num" inputmode="decimal" id="leaseInit" value="0" data-decimals="0">
+      </div>
+      <div>
+        <label>満了時買取額（税抜・任意）</label>
+        <input type="text" class="num" inputmode="decimal" id="leaseBuyout" value="0" data-decimals="0">
+      </div>
+      <div>
+        <label>消費税控除のタイミング</label>
+        <select id="leaseVatTiming">
+          <option value="upfront" selected>一括控除（引渡時）</option>
+          <option value="spread">分割控除（支払期日ごと）</option>
+        </select>
+      </div>
+      <div>
+        <label>保守等の付帯費用（年額・税抜）</label>
+        <input type="text" class="num" inputmode="decimal" id="leaseMaint" value="0" data-decimals="0">
       </div>
     </div>
   </section>
