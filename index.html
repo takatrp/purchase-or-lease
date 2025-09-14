@@ -3,13 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>購入 vs リース 判定ツール（r7）</title>
+<title>購入 vs リース 判定ツール（r12）</title>
 <style>
-  :root{
-    --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46;
-  }
+  :root{ --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46; }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif}
   body{overflow-x:hidden}
   header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:12px 14px;z-index:5}
   header h1{font-size:18px;margin:0}
@@ -31,8 +29,6 @@
   .kpi{display:grid;grid-template-columns:1fr;gap:10px}
   @media(min-width:720px){.kpi{grid-template-columns:1fr 1fr}}
   .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:10px}
-  .pos{color:var(--good);font-weight:800}
-  .neg{color:var(--bad);font-weight:800}
   table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;display:block;overflow-x:auto}
   th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
@@ -40,11 +36,12 @@
   .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
   .chart{width:100%;height:240px}
   svg,img,canvas{max-width:100%;height:auto}
+  pre{white-space:pre-wrap;background:#0f172a10;border:1px dashed #cbd5e1;padding:10px;border-radius:10px}
 </style>
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r7）</h1>
+  <h1>購入 vs リース 判定ツール（r12）</h1>
 </header>
 <main>
   <section class="card">
@@ -185,9 +182,20 @@
     <div id="tables"></div>
   </section>
 
-  <section class="footer card">
-    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r7</div>
+  <section class="card">
+    <div class="title">開発者テスト（r12）</div>
+    <div class="grid g2">
+      <button class="btn" id="runTests">自己診断を実行</button>
+      <div class="muted">※機能は本体に影響しません。結果は下のログに表示されます。</div>
+    </div>
+    <pre id="testLog">未実行</pre>
+    <pre id="errLog">エラーログなし</pre>
   </section>
+
+  <section class="footer card">
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r12</div>
+  </section>
+
   <section class="card" id="actions">
     <div class="title">出力</div>
     <div class="grid g2">
@@ -200,353 +208,173 @@
 </main>
 
 <script>
-// ====== フォーマット & 入力補助 ======
-const fmtChoice = ()=>document.getElementById('fmt').value;
-const yenFmt = n=>{
-  if(fmtChoice()==='auto') return (n/10000).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 万円';
-  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 円';
-};
-const toRate = v => Number(v)/100;
+// ====== DOM util ======
+function byId(id){ return document.getElementById(id); }
 
-function splitNumStr(s){
-  s = (s==null? '' : String(s));
-  let neg = false; if(s.startsWith('-')){ neg = true; s = s.slice(1); }
-  let int='', dec='', dot=false;
-  for(const ch of s){
-    if(ch >= '0' && ch <= '9'){ if(dot) dec += ch; else int += ch; }
-    else if(ch === '.' && !dot){ dot = true; }
-  }
-  return {neg,int,dec};
-}
-function thousands(int){
-  if(!int) int='0';
-  if(int.length <= 3) return int;
-  let out=''; const n=int.length;
-  for(let i=0;i<n;i++){
-    out += int[i]; const rem = n - i - 1; if(rem>0 && rem % 3 === 0) out += ',';
-  }
-  return out;
-}
-function fmtInputString(v, maxDec){
-  if(v===null || v===undefined || v==='') return '';
-  const {neg,int,dec} = splitNumStr(v);
-  let d = dec;
-  if(typeof maxDec === 'number') d = dec.slice(0, maxDec);
-  let s = thousands(int);
-  if(d) s += '.' + d;
-  return (neg?'-':'') + s;
-}
-function toNum(v){
-  if(v===null || v===undefined || v==='') return 0;
-  const {neg,int,dec} = splitNumStr(v);
-  const str = (neg?'-':'') + (int?int:'0') + (dec?'.'+dec:'');
-  const num = Number(str);
-  return isNaN(num)?0:num;
-}
-function getVal(id){ return toNum(document.getElementById(id).value); }
-function setVal(id, v){
-  const el = document.getElementById(id);
-  const decs = el && el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10) : null;
-  el.value = fmtInputString(v, decs);
-}
-function bindFormatters(){
-  document.querySelectorAll('input.num').forEach(el=>{
-    const decs = el && el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10) : null;
-    el.value = fmtInputString(el.value, decs);
-    el.addEventListener('input', ()=>{
-      const before = el.value; const pos = el.selectionStart || before.length;
-      const after = fmtInputString(before, decs);
-      el.value = after;
-      const delta = after.length - before.length;
-      const newPos = Math.max(0, Math.min(after.length, pos + delta));
-      el.setSelectionRange(newPos,newPos);
-    });
-    el.addEventListener('blur', ()=>{ el.value = fmtInputString(el.value, decs); });
-  });
+// ====== フォーマット & 入力補助 ======
+function fmtChoice(){ var el=byId('fmt'); return el? el.value : 'auto'; }
+function yenFmt(n){ if(fmtChoice()==='auto'){ return (n/10000).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 万円'; } return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 円'; }
+function splitNumStr(s){ s = (s==null? '' : String(s)); var neg=false; if(s.indexOf('-')===0){neg=true; s=s.slice(1);} var int='',dec='',dot=false; for(var i=0;i<s.length;i++){ var ch=s[i]; if(ch>='0'&&ch<='9'){ if(dot) dec+=ch; else int+=ch; } else if(ch==='.'&&!dot){ dot=true; } } return {neg:neg,int:int,dec:dec}; }
+function thousands(intPart){ if(!intPart) intPart='0'; if(intPart.length<=3) return intPart; var out=''; var n=intPart.length; for(var i=0;i<n;i++){ out+=intPart[i]; var rem=n-i-1; if(rem>0&&rem%3===0) out+=','; } return out; }
+function fmtInputString(v,maxDec){ if(v==null||v==='') return ''; var p=splitNumStr(v); var d=p.dec; if(typeof maxDec==='number') d=p.dec.slice(0,maxDec); var s=thousands(p.int); if(d) s+='.'+d; return (p.neg?'-':'')+s; }
+function toNum(v){ if(v==null||v==='') return 0; var p=splitNumStr(v); var str=(p.neg?'-':'')+(p.int?p.int:'0')+(p.dec?'.'+p.dec:''); var num=Number(str); return isNaN(num)?0:num; }
+function getVal(id){ var el=byId(id); return el? toNum(el.value):0; }
+function setVal(id,v){ var el=byId(id); if(!el) return; var decs=el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10):null; el.value=fmtInputString(v,decs); }
+function bindFormatters(){ var nodes=document.querySelectorAll('input.num'); for(var i=0;i<nodes.length;i++){ (function(el){ var decs=el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10):null; el.value=fmtInputString(el.value,decs); el.addEventListener('input',function(){ var before=el.value; var pos=el.selectionStart||before.length; var after=fmtInputString(before,decs); el.value=after; var delta=after.length-before.length; var newPos=Math.max(0,Math.min(after.length,pos+delta)); try{ el.setSelectionRange(newPos,newPos);}catch(e){} }); el.addEventListener('blur',function(){ el.value=fmtInputString(el.value,decs); }); })(nodes[i]); }
 }
 
 // ====== 共通計算関数 ======
-const npv = (rate, cfs)=> cfs.reduce((acc,cf,t)=> acc + cf/Math.pow(1+rate,t), 0);
-const eacFromNPV = (rate, npvVal, years)=>{
-  if(rate===0) return npvVal/years; // avoid div by 0
-  const ann = rate * npvVal / (1 - Math.pow(1+rate,-years));
-  return ann;
-}
-function amortization(loan, rate, nYears){
-  // yearly annuity schedule (end of year payments)
-  const r = rate; const n = nYears; const pay = r===0? loan/n : loan * (r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);
-  let bal = loan; const rows=[];
-  for(let y=1;y<=n;y++){
-    const interest = bal * r;
-    const principal = pay - interest;
-    bal = Math.max(0, bal - principal);
-    rows.push({year:y, pay, interest, principal, bal});
-  }
-  return {pay, rows};
-}
-function buildTables(title, rows){
-  const th = `<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>`;
-  const trs = rows.map(r=>`<tr><td>${r.year}</td><td>${fmt(r.ocf)}</td><td>${fmt(r.capex)}</td><td>${fmt(r.tax)}</td><td>${fmt(r.vat)}</td><td>${fmt(r.fin)}</td><td><b>${fmt(r.total)}</b></td></tr>`).join('');
-  return `<h3 style="margin:8px 0">${title}</h3><div style="overflow:auto"><table>${th}${trs}</table></div>`
-}
-function fmt(n){ return (n>=0? '' : '-') + yenFmt(Math.abs(n)); }
+function npv(rate,cfs){ var s=0; for(var t=0;t<cfs.length;t++){ s+= cfs[t]/Math.pow(1+rate,t); } return s; }
+function eacFromNPV(rate,npvVal,years){ if(years<=0) years=1; if(rate===0) return npvVal/years; return rate*npvVal/(1-Math.pow(1+rate,-years)); }
+function amortization(loan,rate,nYears){ var n=Math.max(1,Math.round(nYears)); var r=rate; var pay=r===0? loan/n : loan*((r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1)); var bal=loan; var rows=[]; for(var y=1;y<=n;y++){ var interest=bal*r; var principal=pay-interest; bal=Math.max(0,bal-principal); rows.push({year:y,pay:pay,interest:interest,principal:principal,bal:bal}); } return {pay:pay,rows:rows}; }
+function fmt(n){ return (n>=0?'':'-')+yenFmt(Math.abs(n)); }
+function buildTables(title,rows){ var th='<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>'; var trs=''; for(var i=0;i<rows.length;i++){ var r=rows[i]; trs+= '<tr><td>'+r.year+'</td><td>'+fmt(r.ocf)+'</td><td>'+fmt(r.capex)+'</td><td>'+fmt(r.tax)+'</td><td>'+fmt(r.vat)+'</td><td>'+fmt(r.fin)+'</td><td><b>'+fmt(r.total)+'</b></td></tr>'; } return '<h3 style="margin:8px 0">'+title+'</h3><div style="overflow:auto"><table>'+th+trs+'</table></div>'; }
 
 // —— 判定グラフ描画（SVG） ——
-function renderChart(metric){
-  const el = document.getElementById('chartArea');
-  if(!el || !window._calc){ return; }
-  const {buyEACv, leaseEACv, buyNPCost, leaseNPCost} = window._calc;
-  const a = (metric==='NPC')? buyNPCost : buyEACv;
-  const b = (metric==='NPC')? leaseNPCost : leaseEACv;
-  const draw = ()=>{
-    const w = Math.max(280, el.getBoundingClientRect().width || el.clientWidth || 360);
-    const h = 240, pad = 36, barW = Math.min(120, Math.max(60, Math.floor((w-2*pad)/5)) ), gap = Math.round(barW*0.9);
-    const min = Math.min(0, a, b), max = Math.max(0, a, b);
-    const innerH = h - pad*2;
-    const yFromVal = (v)=>{
-      if(max===min) return h/2; // avoid div by 0
-      const y0 = pad + innerH * (max/(max-min)); // zero line
-      return y0 - (v/(max-min))*innerH;
-    }
-    const y0 = yFromVal(0);
-    const x1 = (w - (2*barW + gap))/2; const x2 = x1 + barW + gap;
-    const bar = (x,val)=>{
-      const yy = yFromVal(val);
-      const yTop = Math.min(yy,y0), yBot = Math.max(yy,y0); const hh = Math.max(2, yBot - yTop);
-      return `<rect x="${x}" y="${yTop}" width="${barW}" height="${hh}" rx="10" fill="#7aa4b4"></rect>`;
-    }
-    const svg = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">
-      <line x1="${pad}" y1="${y0}" x2="${w-pad}" y2="${y0}" stroke="#cbd5e1" stroke-width="1" />
-      ${bar(x1,a)}
-      ${bar(x2,b)}
-      <text x="${x1+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">購入</text>
-      <text x="${x2+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">リース</text>
-      <text x="${x1+barW/2}" y="${Math.min(yFromVal(a), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(a)}</text>
-      <text x="${x2+barW/2}" y="${Math.min(yFromVal(b), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(b)}</text>
-    </svg>`;
-    el.innerHTML = svg;
-  };
-  // 幅0対策：複数回リトライ
-  if((el.getBoundingClientRect().width||0) < 10){
-    requestAnimationFrame(()=> setTimeout(draw, 0));
-    setTimeout(draw, 60);
-  } else {
-    draw();
+function renderChart(metric){ var el=byId('chartArea'); if(!el||!window._calc){return;} var a,b; if(metric==='NPC'){ a=window._calc.buyNPCost; b=window._calc.leaseNPCost; } else { a=window._calc.buyEACv; b=window._calc.leaseEACv; }
+  function draw(){ var w=Math.max(280,(el.getBoundingClientRect().width||el.clientWidth||360)); var h=240,pad=36,barW=Math.min(120,Math.max(60,Math.floor((w-2*pad)/5))),gap=Math.round(barW*0.9); var min=Math.min(0,a,b),max=Math.max(0,a,b); var innerH=h-pad*2; function yFromVal(v){ if(max===min) return h/2; var y0=pad+innerH*(max/(max-min)); return y0-(v/(max-min))*innerH; } var y0=yFromVal(0); var x1=(w-(2*barW+gap))/2; var x2=x1+barW+gap; function bar(x,val){ var yy=yFromVal(val); var yTop=Math.min(yy,y0),yBot=Math.max(yy,y0); var hh=Math.max(2,yBot-yTop); return '<rect x="'+x+'" y="'+yTop+'" width="'+barW+'" height="'+hh+'" rx="10" fill="#7aa4b4"></rect>'; }
+    var svg='<svg width="100%" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">'
+      +'<line x1="'+pad+'" y1="'+y0+'" x2="'+(w-pad)+'" y2="'+y0+'" stroke="#cbd5e1" stroke-width="1" />'
+      + bar(x1,a) + bar(x2,b)
+      +'<text x="'+(x1+barW/2)+'" y="'+(y0+16)+'" text-anchor="middle" font-size="12" fill="#475569">購入</text>'
+      +'<text x="'+(x2+barW/2)+'" y="'+(y0+16)+'" text-anchor="middle" font-size="12" fill="#475569">リース</text>'
+      +'<text x="'+(x1+barW/2)+'" y="'+(Math.min(yFromVal(a),y0)-8)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">'+yenFmt(a)+'</text>'
+      +'<text x="'+(x2+barW/2)+'" y="'+(Math.min(yFromVal(b),y0)-8)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">'+yenFmt(b)+'</text>'
+      +'</svg>';
+    el.innerHTML=svg;
   }
+  if((el.getBoundingClientRect().width||0)<10){ setTimeout(draw,0); setTimeout(draw,60); setTimeout(draw,180); } else { draw(); }
 }
 
-function computeCrossover(buyRows, leaseRows, disc){
-  const years = buyRows.length - 1;
-  const pvCostTo = (rows, upto)=>{
-    let s=0; for(let t=0;t<=upto;t++){ s += rows[t].total / Math.pow(1+disc, t); } return -s; // 純コスト
-  };
-  const winnerAt = (y)=> pvCostTo(buyRows,y) <= pvCostTo(leaseRows,y) ? '購入' : 'リース';
-  const finalWinner = winnerAt(years);
-  let flip = null;
-  for(let y=0;y<=years;y++){
-    if(winnerAt(y) !== finalWinner){ flip = y; break; }
-  }
-  return {flipYear: flip, finalWinner, horizon: years};
-}
+function computeCrossover(buyRows,leaseRows,disc){ var years=buyRows.length-1; function pvCostTo(rows,upto){ var s=0; for(var t=0;t<=upto;t++){ s+=rows[t].total/Math.pow(1+disc,t); } return -s; } function winnerAt(y){ return pvCostTo(buyRows,y)<=pvCostTo(leaseRows,y)?'購入':'リース'; } var finalWinner=winnerAt(years); var flip=null; for(var y=0;y<=years;y++){ if(winnerAt(y)!==finalWinner){ flip=y; break; } } return {flipYear:flip,finalWinner:finalWinner,horizon:years}; }
 
 // ====== メイン計算 ======
 function run(){
-  const years = Math.round(getVal('years'));
-  const disc = getVal('disc')/100;
-  const tax = getVal('tax')/100;
-  const vatRate = getVal('vatRate')/100;
-  const vatCreditRatio = getVal('vatCreditRatio')/100;
-
+  var years=Math.round(getVal('years'));
+  var disc=getVal('disc')/100;
+  var tax=getVal('tax')/100;
+  var vatRate=getVal('vatRate')/100;
+  var vatCreditRatio=getVal('vatCreditRatio')/100;
   // Purchase inputs
-  const price = getVal('buyPrice'); // ex VAT
-  const life = Math.round(getVal('life'));
-  const debtRatio = getVal('debtRatio')/100;
-  const loanRate = getVal('loanRate')/100;
-  const loanYears = Math.round(getVal('loanYears'));
-  const holding = getVal('holdingCost');
-  const salvage = getVal('salvage');
-
+  var price=getVal('buyPrice');
+  var life=Math.round(getVal('life'));
+  var debtRatio=getVal('debtRatio')/100;
+  var loanRate=getVal('loanRate')/100;
+  var loanYears=Math.round(getVal('loanYears'));
+  var holding=getVal('holdingCost');
+  var salvage=getVal('salvage');
   // Lease inputs
-  const leasePay = getVal('leasePay');
-  const leaseYears = Math.round(getVal('leaseYears'));
-  const leaseInit = getVal('leaseInit');
-  const leaseBuyout = getVal('leaseBuyout');
-  const leaseVatTiming = document.getElementById('leaseVatTiming').value; // upfront or spread
-  const leaseMaint = getVal('leaseMaint');
-
-  const tablesDiv = document.getElementById('tables');
+  var leasePay=getVal('leasePay');
+  var leaseYears=Math.round(getVal('leaseYears'));
+  var leaseInit=getVal('leaseInit');
+  var leaseBuyout=getVal('leaseBuyout');
+  var leaseVatEl=byId('leaseVatTiming'); var leaseVatTiming=leaseVatEl? leaseVatEl.value : 'upfront';
+  var leaseMaint=getVal('leaseMaint');
 
   // ---------------- Purchase scenario -----------------
-  const dep = Math.max(0,(price - 1)) / life; // straight-line to 1 yen
-  const loanAmt = price * debtRatio;
-  const loan = amortization(loanAmt, loanRate, Math.min(loanYears, years));
-
-  const buyRows=[]; let cfs=[];
-  for(let y=0;y<=years;y++){
-    let ocf=0, capex=0, fin=0, taxShield=0, vat=0;
+  var dep=Math.max(0,(price-1))/ (life>0?life:1);
+  var loanAmt=price*debtRatio;
+  var loan=amortization(loanAmt,loanRate,Math.max(1,Math.min(loanYears,years)));
+  var buyRows=[]; var cfs=[];
+  for(var y=0;y<=years;y++){
+    var ocf=0,capex=0,fin=0,taxShield=0,vat=0;
     if(y===0){
-      const vatCash = price*vatRate; // paid at purchase
-      vat = + vatCash * vatCreditRatio; // inflow (credit)
-      capex = - (price + vatCash);
-      if(loanAmt>0){ fin += loanAmt; }
+      var vatCash=price*vatRate; // 支払
+      vat= vatCash*vatCreditRatio; // 控除（流入）
+      capex=-(price+vatCash);
+      if(loanAmt>0){ fin+=loanAmt; }
     } else {
-      const yearHolding = holding; // expense (deductible)
-      const depExp = y<=life ? dep : 0; // deductible
-      const taxBaseImpact = -yearHolding - depExp;
-      taxShield = - (taxBaseImpact) * tax; // tax reduction is positive CF
-      ocf = - yearHolding; // cash for holding
-      if(y<=loan.rows.length){
-        const r = loan.rows[y-1];
-        fin -= r.pay; // cash out
-        taxShield += r.interest * tax; // interest shield
-      }
-      if(y===years && salvage!==0){
-        ocf += salvage;
-        const salvageVAT = salvage*vatRate; // 入金（簡略）
-        ocf += salvageVAT;
-        vat -= salvageVAT*vatCreditRatio; // output tax 影響（簡略）
-      }
+      var depExp=y<=life?dep:0; var taxBaseImpact=-holding - depExp; taxShield=-(taxBaseImpact)*tax; ocf=-holding;
+      if(y<=loan.rows.length){ var r=loan.rows[y-1]; fin-=r.pay; taxShield+=r.interest*tax; }
+      if(y===years && salvage!==0){ ocf+=salvage; var salvageVAT=salvage*vatRate; ocf+=salvageVAT; vat-=salvageVAT*vatCreditRatio; }
     }
-    const total = ocf + capex + taxShield + vat + fin;
-    buyRows.push({year:y, ocf, capex, tax:taxShield, vat, fin, total});
-    cfs.push(total);
+    var total=ocf+capex+taxShield+vat+fin; buyRows.push({year:y,ocf:ocf,capex:capex,tax:taxShield,vat:vat,fin:fin,total:total}); cfs.push(total);
   }
-  const buyNPVv = npv(disc, cfs);
-  const buyEACv = eacFromNPV(disc, -buyNPVv, years); // costs正方向
+  var buyNPVv=npv(disc,cfs);
+  var buyEACv=eacFromNPV(disc,-buyNPVv,Math.max(1,years));
 
   // ---------------- Lease scenario -----------------
-  const leaseRows=[]; cfs=[];
-  for(let y=0;y<=years;y++){
-    let ocf=0, capex=0, fin=0, taxShield=0, vat=0;
-    if(y===0){
-      if(leaseInit>0){
-        const vatCash = leaseInit*vatRate;
-        capex = -(leaseInit + vatCash);
-        vat = vatCash*vatCreditRatio; // credit
-      }
+  var leaseRows=[]; cfs=[];
+  for(var y2=0;y2<=years;y2++){
+    var ocf2=0,capex2=0,fin2=0,taxShield2=0,vat2=0;
+    if(y2===0){
+      if(leaseInit>0){ var vatCash2=leaseInit*vatRate; capex2=-(leaseInit+vatCash2); vat2=vatCash2*vatCreditRatio; }
       if(leaseVatTiming==='upfront'){
-        const totalLeaseBase = leasePay*Math.min(leaseYears, years) + leaseBuyout + leaseMaint*Math.min(leaseYears, years);
-        const vatCashAll = totalLeaseBase * vatRate;
-        vat += vatCashAll * vatCreditRatio; // 控除のみ前倒し（近似）
+        var totalLeaseBase=leasePay*Math.min(leaseYears,years)+leaseBuyout+leaseMaint*Math.min(leaseYears,years);
+        var vatCashAll=totalLeaseBase*vatRate; vat2+=vatCashAll*vatCreditRatio; // 控除のみ前倒し（近似）
       }
     } else {
-      if(y<=leaseYears){
-        const base = leasePay;
-        const vatCash = base*vatRate;
-        ocf -= base; // lease payment (税抜)
-        taxShield += base * tax; // 損金
-        if(leaseVatTiming==='spread') vat += vatCash * vatCreditRatio;
-      }
-      if(y===leaseYears && leaseBuyout>0){
-        const vatCash = leaseBuyout*vatRate;
-        ocf -= leaseBuyout;
-        if(leaseVatTiming==='spread') vat += vatCash * vatCreditRatio;
-      }
-      if(leaseMaint>0){
-        ocf -= leaseMaint;
-        taxShield += leaseMaint * tax;
-        if(leaseVatTiming==='spread') vat += leaseMaint*vatRate*vatCreditRatio;
-      }
+      if(y2<=leaseYears){ var base=leasePay; var vatCash3=base*vatRate; ocf2-=base; taxShield2+=base*tax; if(leaseVatTiming==='spread') vat2+=vatCash3*vatCreditRatio; }
+      if(y2===leaseYears && leaseBuyout>0){ var vatCash4=leaseBuyout*vatRate; ocf2-=leaseBuyout; if(leaseVatTiming==='spread') vat2+=vatCash4*vatCreditRatio; }
+      if(leaseMaint>0){ ocf2-=leaseMaint; taxShield2+=leaseMaint*tax; if(leaseVatTiming==='spread') vat2+=leaseMaint*vatRate*vatCreditRatio; }
     }
-    const total = ocf + capex + taxShield + vat + fin;
-    leaseRows.push({year:y, ocf, capex, tax:taxShield, vat, fin, total});
-    cfs.push(total);
+    var total2=ocf2+capex2+taxShield2+vat2+fin2; leaseRows.push({year:y2,ocf:ocf2,capex:capex2,tax:taxShield2,vat:vat2,fin:fin2,total:total2}); cfs.push(total2);
   }
-  const leaseNPVv = npv(disc, cfs);
-  const leaseEACv = eacFromNPV(disc, -leaseNPVv, years);
+  var leaseNPVv=npv(disc,cfs);
+  var leaseEACv=eacFromNPV(disc,-leaseNPVv,Math.max(1,years));
 
   // 出力
-  document.getElementById('buyNPV').textContent = (buyNPVv>=0? '' : '-') + yenFmt(Math.abs(buyNPVv));
-  document.getElementById('leaseNPV').textContent = (leaseNPVv>=0? '' : '-') + yenFmt(Math.abs(leaseNPVv));
-  document.getElementById('buyEAC').textContent = yenFmt(buyEACv);
-  document.getElementById('leaseEAC').textContent = yenFmt(leaseEACv);
-
-  const verdict = ( -buyNPVv < -leaseNPVv ) ? '購入のコスト（NPC/EAC）が小さく、有利と判定しました。' : ( -leaseNPVv < -buyNPVv ) ? 'リースのコスト（NPC/EAC）が小さく、有利と判定しました。' : '両者はほぼ同等です。契約条件の見直しをご検討ください。';
-  document.getElementById('verdict').textContent = verdict + `（分析期間：${years}年）`;
+  var buyNPVEl=byId('buyNPV'); if(buyNPVEl){ buyNPVEl.textContent=(buyNPVv>=0?'':'-')+yenFmt(Math.abs(buyNPVv)); }
+  var leaseNPVEl=byId('leaseNPV'); if(leaseNPVEl){ leaseNPVEl.textContent=(leaseNPVv>=0?'':'-')+yenFmt(Math.abs(leaseNPVv)); }
+  var buyEACEl=byId('buyEAC'); if(buyEACEl){ buyEACEl.textContent=yenFmt(buyEACv); }
+  var leaseEACEl=byId('leaseEAC'); if(leaseEACEl){ leaseEACEl.textContent=yenFmt(leaseEACv); }
+  var verdictEl=byId('verdict'); if(verdictEl){ var verdictTxt=(-buyNPVv < -leaseNPVv)?'購入のコスト（NPC/EAC）が小さく、有利と判定しました。' : (-leaseNPVv < -buyNPVv)?'リースのコスト（NPC/EAC）が小さく、有利と判定しました。' : '両者はほぼ同等です。契約条件の見直しをご検討ください。'; verdictEl.textContent=verdictTxt+'（分析期間：'+years+'年）'; }
 
   // 明細テーブル（先に描画）
-  const tablesDiv = document.getElementById('tables');
-  tablesDiv.innerHTML = buildTables('購入', buyRows) + buildTables('リース', leaseRows);
+  var tablesDiv=byId('tables'); if(tablesDiv){ tablesDiv.innerHTML=buildTables('購入',buyRows)+buildTables('リース',leaseRows); }
 
   // 逆転年
-  const cross = computeCrossover(buyRows, leaseRows, disc);
-  let ctext = '';
-  if(cross.flipYear===null){
-    ctext = `分析期間（${cross.horizon}年）内に逆転はありません（${cross.finalWinner}有利が継続）。`;
-  } else {
-    const other = cross.finalWinner === '購入' ? 'リース' : '購入';
-    ctext = `逆転年：${cross.flipYear}年目（逆転前：${other}有利 → 逆転後：${cross.finalWinner}有利）`;
-  }
-  const cx = document.getElementById('crossover'); if(cx) cx.textContent = ctext;
+  var cross=computeCrossover(buyRows,leaseRows,disc);
+  var ctext=''; if(cross.flipYear===null){ ctext='分析期間（'+cross.horizon+'年）内に逆転はありません（'+cross.finalWinner+'有利が継続）。'; } else { var other=cross.finalWinner==='購入'?'リース':'購入'; ctext='逆転年：'+cross.flipYear+'年目（逆転前：'+other+'有利 → 逆転後：'+cross.finalWinner+'有利）'; }
+  var cx=byId('crossover'); if(cx){ cx.textContent=ctext; }
 
-  // グラフ用データ
-  window._calc = { buyEACv, leaseEACv, buyNPCost: -buyNPVv, leaseNPCost: -leaseNPVv };
-  const metricEl = document.getElementById('metric');
-  if(metricEl){
-    requestAnimationFrame(()=>renderChart(metricEl.value));
-    setTimeout(()=>renderChart(metricEl.value), 60);
-  }
+  // グラフ用データ + 行データを保持（テスト/出力用）
+  window._calc={buyEACv:buyEACv, leaseEACv:leaseEACv, buyNPCost:-buyNPVv, leaseNPCost:-leaseNPVv};
+  window._rows={buyRows:buyRows, leaseRows:leaseRows, disc:disc, years:years};
+  var metricEl=byId('metric'); if(metricEl){ setTimeout(function(){ renderChart(metricEl.value); },0); setTimeout(function(){ renderChart(metricEl.value); },60); setTimeout(function(){ renderChart(metricEl.value); },180); }
 }
 
-function loadSample(){
-  setVal('years',5);
-  setVal('disc',3.00);
-  setVal('tax',31.00);
-  setVal('vatRate',10.00);
-  setVal('vatCreditRatio',100.00);
-  setVal('buyPrice',5_000_000);
-  setVal('life',5);
-  setVal('debtRatio',100.00);
-  setVal('loanRate',2.00);
-  setVal('loanYears',5);
-  setVal('holdingCost',100_000);
-  setVal('salvage',0);
-  setVal('leasePay',1_100_000);
-  setVal('leaseYears',5);
-  setVal('leaseInit',0);
-  setVal('leaseBuyout',0);
-  document.getElementById('leaseVatTiming').value='upfront';
-  setVal('leaseMaint',0);
-  run();
+function loadSample(){ setVal('years',5); setVal('disc',3.00); setVal('tax',31.00); setVal('vatRate',10.00); setVal('vatCreditRatio',100.00); setVal('buyPrice','5000000'); setVal('life',5); setVal('debtRatio',100.00); setVal('loanRate',2.00); setVal('loanYears',5); setVal('holdingCost','100000'); setVal('salvage',0); setVal('leasePay','1100000'); setVal('leaseYears',5); setVal('leaseInit',0); setVal('leaseBuyout',0); var el=byId('leaseVatTiming'); if(el){ el.value='upfront'; } setVal('leaseMaint',0); run(); }
+
+// ====== 出力ユーティリティ ======
+function csvEscape(v){ if(v==null) return ""; var s=String(v); return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function buildCSVString(rowsObj){ var buyRows=rowsObj.buyRows; var leaseRows=rowsObj.leaseRows; var lines=['Scenario,Year,OCF,CAPEX,Tax,VAT,Financing,Total']; function pushRows(name,rows){ for(var i=0;i<rows.length;i++){ var r=rows[i]; lines.push([name,r.year,r.ocf,r.capex,r.tax,r.vat,r.fin,r.total].map(csvEscape).join(',')); } } pushRows('購入',buyRows); pushRows('リース',leaseRows); return '\uFEFF'+lines.join('\n'); }
+function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r12_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function copyResult(){ var verdictEl=byId('verdict'); var buyNPVEl=byId('buyNPV'); var leaseNPVEl=byId('leaseNPV'); var buyEACEl=byId('buyEAC'); var leaseEACEl=byId('leaseEAC'); var crossEl=byId('crossover'); var text=['【判定】', verdictEl?verdictEl.textContent:'', '購入 NPC/EAC: '+(buyNPVEl?buyNPVEl.textContent:'')+' / '+(buyEACEl?buyEACEl.textContent:''), 'リース NPC/EAC: '+(leaseNPVEl?leaseNPVEl.textContent:'')+' / '+(leaseEACEl?leaseEACEl.textContent:''), (crossEl?crossEl.textContent:'')].join('\n'); try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ alert('判定結果をコピーしました'); }, function(){ alert(text); }); } else { throw new Error('no clipboard'); } } catch(e){ alert(text); } }
+
+// ====== テスト ======
+function runSelfTests(){ var log=[]; function write(s){ log.push(s); } function ok(name,cond){ write((cond?'✅ ':'❌ ')+name); if(!cond) throw new Error(name); } function step(name,fn){ try{ fn(); write('— '+name+' OK'); } catch(e){ write('— '+name+' ERROR: '+e.message); } }
+  try{
+    step('初期サンプルで実行', function(){ loadSample(); ok('tables に表が描画', byId('tables').innerHTML.indexOf('<table>')>=0); ok('グラフSVGが描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); });
+    step('金利2桁小数が正しく解釈', function(){ setVal('loanRate','2.34'); var v=getVal('loanRate'); ok('≈2.34', Math.abs(v-2.34)<1e-9); });
+    step('行データ件数（年数+1）', function(){ var r=window._rows; var yrs=r.years; ok('購入行数', r.buyRows.length===yrs+1); ok('リース行数', r.leaseRows.length===yrs+1); });
+    step('逆転年APIの一貫性', function(){ var r=window._rows; var cross=computeCrossover(r.buyRows,r.leaseRows,r.disc); ok('horizon=years', cross.horizon===r.years); });
+    step('指標切替で再描画', function(){ var sel=byId('metric'); sel.value='NPC'; renderChart(sel.value); ok('NPC描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); sel.value='EAC'; renderChart(sel.value); ok('EAC描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); });
+    step('CSV生成行数', function(){ var r=window._rows; var csv=buildCSVString(r); var lines=csv.split('\n'); var expect=1+(r.years+1)*2; ok('ヘッダ+明細行数', lines.length===expect); });
+    // 追加テスト
+    step('判定テキストが空でない', function(){ ok('verdict filled', (byId('verdict').textContent||'').length>0); });
+    step('逆転表示テキストが空でない', function(){ ok('crossover filled', (byId('crossover').textContent||'').length>0); });
+  } finally { byId('testLog').textContent=log.join('\n'); }
 }
 
 // ====== 起動処理 ======
-window.addEventListener('load',()=>{
+function scheduleChart(){ var metricEl=byId('metric'); var m=metricEl? metricEl.value : 'EAC'; setTimeout(function(){ renderChart(m); },0); setTimeout(function(){ renderChart(m); },60); setTimeout(function(){ renderChart(m); },180); }
+function ensureRender(attempt){ attempt = attempt||1; var max=5; var tbl=byId('tables'); var chr=byId('chartArea'); var okT=tbl && tbl.querySelector && tbl.querySelector('table'); var okC=chr && chr.querySelector && chr.querySelector('svg'); if(okT && okC) return; if(attempt<=max){ setTimeout(function(){ run(); scheduleChart(); ensureRender(attempt+1); }, 120*attempt); } }
+function runSafe(){ try{ run(); } catch(e){ var el=byId('errLog'); if(el){ el.textContent='ERROR in run(): '+e.message; } } }
+window.addEventListener('load', function(){
   bindFormatters();
-  const renderNow=()=>{ const m=(document.getElementById('metric')||{}).value || 'EAC'; renderChart(m); setTimeout(()=>renderChart(m),60); setTimeout(()=>renderChart(m),180); };
-  const ensureRender=(attempt=1)=>{
-    const max=5;
-    const okT=!!document.getElementById('tables')?.querySelector('table');
-    const okC=!!document.getElementById('chartArea')?.querySelector('svg');
-    if(okT && okC) return;
-    if(attempt<=max){ setTimeout(()=>{ run(); renderNow(); ensureRender(attempt+1); }, 120*attempt); }
-  };
-  const onRun=()=>{ run(); renderNow(); ensureRender(); };
-  document.getElementById('run').addEventListener('click', onRun);
-  document.getElementById('sample').addEventListener('click', ()=>{ loadSample(); renderNow(); ensureRender(); });
-  const metricEl=document.getElementById('metric'); if(metricEl){ metricEl.addEventListener('change', ()=>{ renderNow(); ensureRender(); }); }
-  const testBtn=document.getElementById('runTests'); if(testBtn){ testBtn.addEventListener('click', runSelfTests); }
-  const chartArea=document.getElementById('chartArea'); if('ResizeObserver' in window && chartArea){ const ro=new ResizeObserver(()=>{ renderNow(); ensureRender(); }); ro.observe(chartArea); }
-  window.addEventListener('resize', ()=>{ renderNow(); ensureRender(); });
-  // 出力ボタン
-  const copyBtn=document.getElementById('copyBtn'); if(copyBtn) copyBtn.addEventListener('click', copyResult);
-  const csvBtn=document.getElementById('csvBtn'); if(csvBtn) csvBtn.addEventListener('click', exportCSV);
-  const printBtn=document.getElementById('printBtn'); if(printBtn) printBtn.addEventListener('click', ()=>window.print());
+  var runBtn=byId('run'); if(runBtn){ runBtn.addEventListener('click', function(){ runSafe(); scheduleChart(); ensureRender(1); }); }
+  var sampBtn=byId('sample'); if(sampBtn){ sampBtn.addEventListener('click', function(){ loadSample(); scheduleChart(); ensureRender(1); }); }
+  var metricEl=byId('metric'); if(metricEl){ metricEl.addEventListener('change', function(){ scheduleChart(); ensureRender(1); }); }
+  var testBtn=byId('runTests'); if(testBtn){ testBtn.addEventListener('click', runSelfTests); }
+  if('ResizeObserver' in window){ var chartArea=byId('chartArea'); if(chartArea){ try{ new ResizeObserver(function(){ scheduleChart(); }).observe(chartArea); }catch(e){} } }
+  var copyBtn=byId('copyBtn'); if(copyBtn){ copyBtn.addEventListener('click', copyResult); }
+  var csvBtn=byId('csvBtn'); if(csvBtn){ csvBtn.addEventListener('click', exportCSV); }
+  var printBtn=byId('printBtn'); if(printBtn){ printBtn.addEventListener('click', function(){ window.print(); }); }
   // 初回
   loadSample();
-  renderNow();
-  ensureRender();
-});
-  const renderNow = ()=>{ const m = (document.getElementById('metric')||{}).value || 'EAC'; requestAnimationFrame(()=>renderChart(m)); setTimeout(()=>renderChart(m),60); };
-  const onRun = ()=>{ run(); renderNow(); };
-  document.getElementById('run').addEventListener('click', onRun);
-  document.getElementById('sample').addEventListener('click', ()=>{ loadSample(); renderNow(); });
-  const metricEl = document.getElementById('metric');
-  if(metricEl){ metricEl.addEventListener('change', ()=> renderNow()); }
-  window.addEventListener('resize', renderNow);
-  // 初回
-  loadSample();
-  renderNow();
+  scheduleChart();
+  ensureRender(1);
 });
 </script>
 </body>
