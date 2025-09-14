@@ -2,14 +2,15 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>購入 vs リース 判定ツール（r13）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#5b8aa3"/>
+<title>購入 vs リース 判定ツール（r14）</title>
 <style>
   :root{ --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46; }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif}
   body{overflow-x:hidden}
-  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:12px 14px;z-index:5}
+  header{position:sticky;top:0;background:linear-gradient(90deg,#5b8aa3,#7aa4b4);color:#fff;padding:12px 14px;z-index:20}
   header h1{font-size:18px;margin:0}
   main{padding:12px;display:grid;gap:12px;max-width:1100px;margin:0 auto}
   .card{background:var(--card);border-radius:14px;box-shadow:0 4px 16px rgba(2,6,23,.06);padding:12px;margin:0}
@@ -17,31 +18,38 @@
   .g2{grid-template-columns:1fr}
   @media(min-width:840px){.g2{grid-template-columns:1fr 1fr}}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
-  input,select{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;font-size:16px}
+  input,select{width:100%;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;font-size:16px}
   input.num{font-variant-numeric:tabular-nums}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
   .row.metric{grid-template-columns:1fr}
   @media(min-width:520px){ .row.metric{grid-template-columns:1fr 180px;} }
   .title{font-weight:700;margin:4px 0 8px}
   .muted{color:var(--muted)}
-  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;justify-content:center}
+  .btn{cursor:pointer;display:inline-flex;gap:8px;align-items:center;border:none;background:var(--brand);color:#fff;padding:14px 18px;border-radius:14px;font-weight:700;justify-content:center;font-size:16px}
   .btn.secondary{background:#0f172a}
   .kpi{display:grid;grid-template-columns:1fr;gap:10px}
   @media(min-width:720px){.kpi{grid-template-columns:1fr 1fr}}
   .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:10px}
-  table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;display:block;overflow-x:auto}
-  th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap}
+  table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
   .footer{font-size:12px;color:var(--muted)}
   .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6fb;color:#0b3954;font-size:12px}
   .chart{width:100%;height:240px}
   svg,img,canvas{max-width:100%;height:auto}
   pre{white-space:pre-wrap;background:#0f172a10;border:1px dashed #cbd5e1;padding:10px;border-radius:10px}
+  /* === モバイル最適化 === */
+  @media(max-width:640px){
+    .chart{height:200px}
+    #runbar{position:sticky;bottom:0;z-index:30;padding-bottom:calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(6px);background:rgba(255,255,255,.92);box-shadow:0 -6px 16px rgba(15,23,42,.10)}
+    .btn{padding:16px 18px;font-size:17px;border-radius:16px}
+    header h1{font-size:16px}
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r13）</h1>
+  <h1>購入 vs リース 判定ツール（r14）</h1>
 </header>
 <main>
   <section class="card">
@@ -111,40 +119,7 @@
     </div>
   </section>
 
-  <section class="card">
-    <div class="title">リースシナリオ</div>
-    <div class="grid g2">
-      <div>
-        <label>リース料（年額・税抜）</label>
-        <input type="text" class="num" inputmode="decimal" id="leasePay" value="1,100,000" data-decimals="0">
-      </div>
-      <div>
-        <label>リース年数（年）</label>
-        <input type="text" class="num" inputmode="numeric" id="leaseYears" value="5" data-decimals="0">
-      </div>
-      <div>
-        <label>初回費用（税抜）<span class="muted">　保証料・設定費等</span></label>
-        <input type="text" class="num" inputmode="decimal" id="leaseInit" value="0" data-decimals="0">
-      </div>
-      <div>
-        <label>満了時買取額（税抜・任意）</label>
-        <input type="text" class="num" inputmode="decimal" id="leaseBuyout" value="0" data-decimals="0">
-      </div>
-      <div>
-        <label>消費税控除のタイミング</label>
-        <select id="leaseVatTiming">
-          <option value="upfront" selected>一括控除（引渡時）</option>
-          <option value="spread">分割控除（支払期日ごと）</option>
-        </select>
-      </div>
-      <div>
-        <label>保守等の付帯費用（年額・税抜）</label>
-        <input type="text" class="num" inputmode="decimal" id="leaseMaint" value="0" data-decimals="0">
-      </div>
-    </div>
-  </section>
-
-  <section class="card">
+  <section class="card" id="runbar">
     <div class="grid g2">
       <button class="btn" id="run">試算する</button>
       <button class="btn secondary" id="sample">サンプルを読み込む</button>
@@ -183,7 +158,7 @@
   </section>
 
   <section class="card">
-    <div class="title">開発者テスト（r13）</div>
+    <div class="title">開発者テスト（r14）</div>
     <div class="grid g2">
       <button class="btn" id="runTests">自己診断を実行</button>
       <div class="muted">※機能は本体に影響しません。結果は下のログに表示されます。</div>
@@ -193,7 +168,7 @@
   </section>
 
   <section class="footer card">
-    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r13</div>
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r14</div>
   </section>
 
   <section class="card" id="actions">
@@ -214,19 +189,16 @@ function byId(id){ return document.getElementById(id); }
 // ====== 全角→半角 正規化 ======
 function normalizeNumString(s){
   if(s==null) return '';
-  var out='';
-  for(var i=0;i<String(s).length;i++){
-    var c=String(s)[i];
+  var src=String(s), out='';
+  for(var i=0;i<src.length;i++){
+    var c=src[i];
     var code=c.charCodeAt(0);
-    // 全角数字 ０(0xFF10)〜９(0xFF19)
     if(code>=0xFF10 && code<=0xFF19){ out+=String.fromCharCode(code-0xFF10+0x30); continue; }
-    // 全角記号→半角
     if(c==='．'){ out+='.'; continue; }
     if(c==='，' || c==='、'){ out+=','; continue; }
     if(c==='－' || c==='ー'){ out+='-'; continue; }
     if(c==='＋'){ out+='+'; continue; }
     if(c==='％'){ out+='%'; continue; }
-    // その他はそのまま
     out+=c;
   }
   return out;
@@ -236,13 +208,15 @@ function normalizeNumString(s){
 function fmtChoice(){ var el=byId('fmt'); return el? el.value : 'auto'; }
 function yenFmt(n){ if(fmtChoice()==='auto'){ return (n/10000).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 万円'; } return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 円'; }
 function splitNumStr(s){ s = normalizeNumString(s); var neg=false; if(s.indexOf('-')===0){neg=true; s=s.slice(1);} var int='',dec='',dot=false; for(var i=0;i<s.length;i++){ var ch=s[i]; if(ch>='0'&&ch<='9'){ if(dot) dec+=ch; else int+=ch; } else if(ch==='.'&&!dot){ dot=true; } }
-  return {neg:neg,int:int,dec:dec}; }
+  return {neg:neg,int:int,dec:dec, hadDot:dot, raw:s}; }
 function thousands(intPart){ if(!intPart) intPart='0'; if(intPart.length<=3) return intPart; var out=''; var n=intPart.length; for(var i=0;i<n;i++){ out+=intPart[i]; var rem=n-i-1; if(rem>0&&rem%3===0) out+=','; } return out; }
-function fmtInputString(v,maxDec){ if(v==null||v==='') return ''; var p=splitNumStr(v); var d=p.dec; if(typeof maxDec==='number') d=p.dec.slice(0,maxDec); var s=thousands(p.int); if(d) s+='.'+d; return (p.neg?'-':'')+s; }
+// 変更: keepDot 対応で小数点だけ先に入力しても維持する
+function fmtInputString(v,maxDec,keepDot){ if(v==null||v==='') return ''; var p=splitNumStr(v); var d=p.dec; if(typeof maxDec==='number') d=p.dec.slice(0,maxDec); var s=thousands(p.int); if(d){ s+='.'+d; } else if(keepDot && maxDec && maxDec>0){ s+='.'; }
+  return (p.neg?'-':'')+s; }
 function toNum(v){ if(v==null||v==='') return 0; var p=splitNumStr(v); var str=(p.neg?'-':'')+(p.int?p.int:'0')+(p.dec?'.'+p.dec:''); var num=Number(str); return isNaN(num)?0:num; }
 function getVal(id){ var el=byId(id); return el? toNum(el.value):0; }
-function setVal(id,v){ var el=byId(id); if(!el) return; var decs=el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10):null; el.value=fmtInputString(v,decs); }
-function bindFormatters(){ var nodes=document.querySelectorAll('input.num'); for(var i=0;i<nodes.length;i++){ (function(el){ var decs=el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10):null; el.value=fmtInputString(el.value,decs); el.addEventListener('input',function(){ var before=el.value; var pos=el.selectionStart||before.length; var after=fmtInputString(before,decs); el.value=after; var delta=after.length-before.length; var newPos=Math.max(0,Math.min(after.length,pos+delta)); try{ el.setSelectionRange(newPos,newPos);}catch(e){} }); el.addEventListener('change',function(){ el.value=fmtInputString(el.value,decs); }); el.addEventListener('blur',function(){ el.value=fmtInputString(el.value,decs); }); })(nodes[i]); }
+function setVal(id,v){ var el=byId(id); if(!el) return; var decs=el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10):null; el.value=fmtInputString(v,decs,false); }
+function bindFormatters(){ var nodes=document.querySelectorAll('input.num'); for(var i=0;i<nodes.length;i++){ (function(el){ var decs=el.dataset && el.dataset.decimals ? parseInt(el.dataset.decimals,10):null; el.value=fmtInputString(el.value,decs,false); el.addEventListener('input',function(){ var before=el.value; var raw=normalizeNumString(before); var keepDot=/[\.．]$/.test(raw); var pos=el.selectionStart||before.length; var after=fmtInputString(before,decs,keepDot); el.value=after; var delta=after.length-before.length; var newPos=Math.max(0,Math.min(after.length,pos+delta)); try{ el.setSelectionRange(newPos,newPos);}catch(e){} }); el.addEventListener('change',function(){ el.value=fmtInputString(el.value,decs,false); }); el.addEventListener('blur',function(){ el.value=fmtInputString(el.value,decs,false); }); })(nodes[i]); }
 }
 
 // ====== 共通計算関数 ======
@@ -361,7 +335,7 @@ function loadSample(){ setVal('years',5); setVal('disc','3.00'); setVal('tax','3
 // ====== 出力ユーティリティ ======
 function csvEscape(v){ if(v==null) return ""; var s=String(v); return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function buildCSVString(rowsObj){ var buyRows=rowsObj.buyRows; var leaseRows=rowsObj.leaseRows; var lines=['Scenario,Year,OCF,CAPEX,Tax,VAT,Financing,Total']; function pushRows(name,rows){ for(var i=0;i<rows.length;i++){ var r=rows[i]; lines.push([name,r.year,r.ocf,r.capex,r.tax,r.vat,r.fin,r.total].map(csvEscape).join(',')); } } pushRows('購入',buyRows); pushRows('リース',leaseRows); return '\uFEFF'+lines.join('\n'); }
-function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r13_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r14_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 function copyResult(){ var verdictEl=byId('verdict'); var buyNPVEl=byId('buyNPV'); var leaseNPVEl=byId('leaseNPV'); var buyEACEl=byId('buyEAC'); var leaseEACEl=byId('leaseEAC'); var crossEl=byId('crossover'); var text=['【判定】', verdictEl?verdictEl.textContent:'', '購入 NPC/EAC: '+(buyNPVEl?buyNPVEl.textContent:'')+' / '+(buyEACEl?buyEACEl.textContent:''), 'リース NPC/EAC: '+(leaseNPVEl?leaseNPVEl.textContent:'')+' / '+(leaseEACEl?leaseEACEl.textContent:''), (crossEl?crossEl.textContent:'')].join('\n'); try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ alert('判定結果をコピーしました'); }, function(){ alert(text); }); } else { throw new Error('no clipboard'); } } catch(e){ alert(text); } }
 
 // ====== テスト ======
@@ -376,6 +350,8 @@ function runSelfTests(){ var log=[]; function write(s){ log.push(s); } function 
     // 追加テスト: 全角入力の解釈
     step('全角数値の解釈（割引率）', function(){ setVal('disc','３．２５'); var v=getVal('disc'); ok('≈3.25', Math.abs(v-3.25)<1e-9); });
     step('全角カンマの解釈（購入価額）', function(){ setVal('buyPrice','５，０００，０００'); var v=getVal('buyPrice'); ok('=5000000', v===5000000); });
+    // 追加テスト: ドット単独入力の保持
+    step('小数点打鍵の保持（3. → 3.）', function(){ var out=fmtInputString('3.',2,true); ok('"3."維持', out==='3.'); });
   } finally { byId('testLog').textContent=log.join('\n'); }
 }
 
