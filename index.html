@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#5b8aa3"/>
-<title>購入 vs リース 判定ツール（r15）</title>
+<title>購入 vs リース 判定ツール（r16）</title>
 <style>
   :root{ --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46; }
   *{box-sizing:border-box}
@@ -30,7 +30,9 @@
   .kpi{display:grid;grid-template-columns:1fr;gap:10px}
   @media(min-width:720px){.kpi{grid-template-columns:1fr 1fr}}
   .kpi .box{border:1px dashed #dbe3ec;border-radius:12px;padding:10px}
-  table{width:100%;border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;font-feature-settings:"tnum" 1,"lnum" 1;width:auto;max-width:none;display:table}
   th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
   .footer{font-size:12px;color:var(--muted)}
@@ -55,7 +57,7 @@
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r15）</h1>
+  <h1>購入 vs リース 判定ツール（r16）</h1>
 </header>
 <main>
   <section class="card">
@@ -197,7 +199,7 @@
   </section>
 
   <section class="card">
-    <div class="title">開発者テスト（r14）</div>
+    <div class="title">開発者テスト（r16）</div>
     <div class="grid g2">
       <button class="btn" id="runTests">自己診断を実行</button>
       <div class="muted">※機能は本体に影響しません。結果は下のログに表示されます。</div>
@@ -207,7 +209,7 @@
   </section>
 
   <section class="footer card">
-    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r14</div>
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r16</div>
   </section>
 
   <section class="card" id="actions">
@@ -263,7 +265,7 @@ function npv(rate,cfs){ var s=0; for(var t=0;t<cfs.length;t++){ s+= cfs[t]/Math.
 function eacFromNPV(rate,npvVal,years){ if(years<=0) years=1; if(rate===0) return npvVal/years; return rate*npvVal/(1-Math.pow(1+rate,-years)); }
 function amortization(loan,rate,nYears){ var n=Math.max(1,Math.round(nYears)); var r=rate; var pay=r===0? loan/n : loan*((r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1)); var bal=loan; var rows=[]; for(var y=1;y<=n;y++){ var interest=bal*r; var principal=pay-interest; bal=Math.max(0,bal-principal); rows.push({year:y,pay:pay,interest:interest,principal:principal,bal:bal}); } return {pay:pay,rows:rows}; }
 function fmt(n){ return (n>=0?'':'-')+yenFmt(Math.abs(n)); }
-function buildTables(title,rows){ var th='<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>'; var trs=''; for(var i=0;i<rows.length;i++){ var r=rows[i]; trs+= '<tr><td>'+r.year+'</td><td>'+fmt(r.ocf)+'</td><td>'+fmt(r.capex)+'</td><td>'+fmt(r.tax)+'</td><td>'+fmt(r.vat)+'</td><td>'+fmt(r.fin)+'</td><td><b>'+fmt(r.total)+'</b></td></tr>'; } return '<h3 style="margin:8px 0">'+title+'</h3><div style="overflow:auto"><table>'+th+trs+'</table></div>'; }
+function buildTables(title,rows){ var th='<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>'; var trs=''; for(var i=0;i<rows.length;i++){ var r=rows[i]; trs+= '<tr><td>'+r.year+'</td><td>'+fmt(r.ocf)+'</td><td>'+fmt(r.capex)+'</td><td>'+fmt(r.tax)+'</td><td>'+fmt(r.vat)+'</td><td>'+fmt(r.fin)+'</td><td><b>'+fmt(r.total)+'</b></td></tr>'; } return '<h3 style="margin:8px 0">'+title+'</h3><div class="table-scroll"><table>'+th+trs+'</table></div>'; } return '<h3 style="margin:8px 0">'+title+'</h3><div style="overflow:auto"><table>'+th+trs+'</table></div>'; }
 
 // —— 判定グラフ描画（SVG） ——
 function renderChart(metric){ var el=byId('chartArea'); if(!el||!window._calc){return;} var a,b; if(metric==='NPC'){ a=window._calc.buyNPCost; b=window._calc.leaseNPCost; } else { a=window._calc.buyEACv; b=window._calc.leaseEACv; }
@@ -374,7 +376,7 @@ function loadSample(){ setVal('years',5); setVal('disc','3.00'); setVal('tax','3
 // ====== 出力ユーティリティ ======
 function csvEscape(v){ if(v==null) return ""; var s=String(v); return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function buildCSVString(rowsObj){ var buyRows=rowsObj.buyRows; var leaseRows=rowsObj.leaseRows; var lines=['Scenario,Year,OCF,CAPEX,Tax,VAT,Financing,Total']; function pushRows(name,rows){ for(var i=0;i<rows.length;i++){ var r=rows[i]; lines.push([name,r.year,r.ocf,r.capex,r.tax,r.vat,r.fin,r.total].map(csvEscape).join(',')); } } pushRows('購入',buyRows); pushRows('リース',leaseRows); return '\uFEFF'+lines.join('\n'); }
-function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r14_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r16_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 function copyResult(){ var verdictEl=byId('verdict'); var buyNPVEl=byId('buyNPV'); var leaseNPVEl=byId('leaseNPV'); var buyEACEl=byId('buyEAC'); var leaseEACEl=byId('leaseEAC'); var crossEl=byId('crossover'); var text=['【判定】', verdictEl?verdictEl.textContent:'', '購入 NPC/EAC: '+(buyNPVEl?buyNPVEl.textContent:'')+' / '+(buyEACEl?buyEACEl.textContent:''), 'リース NPC/EAC: '+(leaseNPVEl?leaseNPVEl.textContent:'')+' / '+(leaseEACEl?leaseEACEl.textContent:''), (crossEl?crossEl.textContent:'')].join('\n'); try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ alert('判定結果をコピーしました'); }, function(){ alert(text); }); } else { throw new Error('no clipboard'); } } catch(e){ alert(text); } }
 
 // ====== テスト ======
