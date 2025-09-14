@@ -254,6 +254,41 @@ const eacFromNPV = (rate, npv, years)=>{
   const ann = rate * npv / (1 - Math.pow(1+rate,-years));
   return ann;
 }
+
+// —— 判定グラフ描画（SVG） ——
+function renderChart(metric){
+  const el = document.getElementById('chartArea');
+  if(!el || !window._calc){ return; }
+  const {buyEACv, leaseEACv, buyNPCost, leaseNPCost} = window._calc;
+  const a = (metric==='NPC')? buyNPCost : buyEACv;
+  const b = (metric==='NPC')? leaseNPCost : leaseEACv;
+  const w = el.clientWidth || 360, h = 220, pad = 36, barW = 76, gap = 64;
+  const min = Math.min(0, a, b), max = Math.max(0, a, b);
+  const innerH = h - pad*2;
+  const yFromVal = (v)=>{
+    if(max===min) return h/2; // avoid div by 0
+    const y0 = pad + innerH * (max/(max-min)); // zero line
+    return y0 - (v/(max-min))*innerH;
+  }
+  const y0 = yFromVal(0);
+  const x1 = (w - (2*barW + gap))/2; const x2 = x1 + barW + gap;
+  const bar = (x,val)=>{
+    const y = yFromVal(val);
+    const yTop = Math.min(y,y0), yBot = Math.max(y,y0); const hh = Math.max(2, yBot - yTop);
+    return `<rect x="${x}" y="${yTop}" width="${barW}" height="${hh}" rx="8" fill="#7aa4b4"></rect>`;
+  }
+  const svg = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">
+    <line x1="${pad}" y1="${y0}" x2="${w-pad}" y2="${y0}" stroke="#cbd5e1" stroke-width="1" />
+    ${bar(x1,a)}
+    ${bar(x2,b)}
+    <text x="${x1+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">購入</text>
+    <text x="${x2+barW/2}" y="${y0+16}" text-anchor="middle" font-size="12" fill="#475569">リース</text>
+    <text x="${x1+barW/2}" y="${Math.min(yFromVal(a), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(a)}</text>
+    <text x="${x2+barW/2}" y="${Math.min(yFromVal(b), y0)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${yenFmt(b)}</text>
+  </svg>`;
+  el.innerHTML = svg;
+}
+
 function amortization(loan, rate, nYears){
   // yearly annuity schedule (end of year payments)
   const r = rate; const n = nYears; const pay = r===0? loan/n : loan * (r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);
@@ -402,12 +437,13 @@ function run(){
   const verdict = ( -buyNPVv < -leaseNPVv ) ? '購入のコスト（NPC/EAC）が小さく、有利と判定しました。' : ( -leaseNPVv < -buyNPVv ) ? 'リースのコスト（NPC/EAC）が小さく、有利と判定しました。' : '両者はほぼ同等です。契約条件の見直しをご検討ください。';
   document.getElementById('verdict').textContent = verdict;
 
+  // 明細テーブルを先に描画
+  tablesDiv.innerHTML = buildTables('購入', buyRows) + buildTables('リース', leaseRows);
+
   // グラフ用データ（NPCは純コスト= -NPVで扱う）
   window._calc = { buyEACv, leaseEACv, buyNPCost: -buyNPVv, leaseNPCost: -leaseNPVv };
   const metricEl = document.getElementById('metric');
-  if(metricEl) renderChart(metricEl.value);
-
-  tablesDiv.innerHTML = buildTables('購入', buyRows) + buildTables('リース', leaseRows);
+  if(metricEl){ setTimeout(()=>renderChart(metricEl.value), 0); }
 }
 
 function loadSample(){
@@ -432,14 +468,16 @@ function loadSample(){
   run();
 }
 
-bindFormatters();
-bindFormatters();
-document.getElementById('run').addEventListener('click', run);
-document.getElementById('sample').addEventListener('click', loadSample);
-const metricEl = document.getElementById('metric');
-if(metricEl){ metricEl.addEventListener('change', ()=> renderChart(metricEl.value)); }
-// 初回
-loadSample();
+window.addEventListener('load', ()=>{
+  bindFormatters();
+  const onRun = ()=>{ run(); const m = (document.getElementById('metric')||{}).value || 'EAC'; setTimeout(()=>renderChart(m), 0); };
+  document.getElementById('run').addEventListener('click', onRun);
+  document.getElementById('sample').addEventListener('click', ()=>{ loadSample(); const m=(document.getElementById('metric')||{}).value || 'EAC'; setTimeout(()=>renderChart(m),0); });
+  const metricEl = document.getElementById('metric');
+  if(metricEl){ metricEl.addEventListener('change', ()=> renderChart(metricEl.value)); }
+  // 初回
+  loadSample();
+});
 </script>
 </body>
 </html>
