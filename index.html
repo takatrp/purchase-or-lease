@@ -188,6 +188,15 @@
   <section class="footer card">
     <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r7</div>
   </section>
+  <section class="card" id="actions">
+    <div class="title">出力</div>
+    <div class="grid g2">
+      <button class="btn" id="copyBtn">コピー</button>
+      <button class="btn" id="csvBtn">CSV出力</button>
+      <button class="btn secondary" id="printBtn">印刷</button>
+    </div>
+  </section>
+
 </main>
 
 <script>
@@ -502,8 +511,32 @@ function loadSample(){
 }
 
 // ====== 起動処理 ======
-window.addEventListener('load', ()=>{
+window.addEventListener('load',()=>{
   bindFormatters();
+  const renderNow=()=>{ const m=(document.getElementById('metric')||{}).value || 'EAC'; renderChart(m); setTimeout(()=>renderChart(m),60); setTimeout(()=>renderChart(m),180); };
+  const ensureRender=(attempt=1)=>{
+    const max=5;
+    const okT=!!document.getElementById('tables')?.querySelector('table');
+    const okC=!!document.getElementById('chartArea')?.querySelector('svg');
+    if(okT && okC) return;
+    if(attempt<=max){ setTimeout(()=>{ run(); renderNow(); ensureRender(attempt+1); }, 120*attempt); }
+  };
+  const onRun=()=>{ run(); renderNow(); ensureRender(); };
+  document.getElementById('run').addEventListener('click', onRun);
+  document.getElementById('sample').addEventListener('click', ()=>{ loadSample(); renderNow(); ensureRender(); });
+  const metricEl=document.getElementById('metric'); if(metricEl){ metricEl.addEventListener('change', ()=>{ renderNow(); ensureRender(); }); }
+  const testBtn=document.getElementById('runTests'); if(testBtn){ testBtn.addEventListener('click', runSelfTests); }
+  const chartArea=document.getElementById('chartArea'); if('ResizeObserver' in window && chartArea){ const ro=new ResizeObserver(()=>{ renderNow(); ensureRender(); }); ro.observe(chartArea); }
+  window.addEventListener('resize', ()=>{ renderNow(); ensureRender(); });
+  // 出力ボタン
+  const copyBtn=document.getElementById('copyBtn'); if(copyBtn) copyBtn.addEventListener('click', copyResult);
+  const csvBtn=document.getElementById('csvBtn'); if(csvBtn) csvBtn.addEventListener('click', exportCSV);
+  const printBtn=document.getElementById('printBtn'); if(printBtn) printBtn.addEventListener('click', ()=>window.print());
+  // 初回
+  loadSample();
+  renderNow();
+  ensureRender();
+});
   const renderNow = ()=>{ const m = (document.getElementById('metric')||{}).value || 'EAC'; requestAnimationFrame(()=>renderChart(m)); setTimeout(()=>renderChart(m),60); };
   const onRun = ()=>{ run(); renderNow(); };
   document.getElementById('run').addEventListener('click', onRun);
