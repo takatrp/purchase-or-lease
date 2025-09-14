@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#5b8aa3"/>
-<title>購入 vs リース 判定ツール（r20）</title>
+<title>購入 vs リース 判定ツール（r22）</title>
 <style>
   :root{ --bg:#f7f9fb; --card:#ffffff; --ink:#0f172a; --muted:#475569; --brand:#578899; --bad:#b91c1c; --good:#065f46; }
   *{box-sizing:border-box}
@@ -56,7 +56,7 @@
 </head>
 <body>
 <header>
-  <h1>購入 vs リース 判定ツール（r20）</h1>
+  <h1>購入 vs リース 判定ツール（r22）</h1>
 </header>
 <main>
   <section class="card">
@@ -198,7 +198,7 @@
   </section>
 
   <section class="card">
-    <div class="title">開発者テスト（r20）</div>
+    <div class="title">開発者テスト（r22）</div>
     <div class="grid g2">
       <button class="btn" id="runTests">自己診断を実行</button>
       <div class="muted">※機能は本体に影響しません。結果は下のログに表示されます。</div>
@@ -208,7 +208,7 @@
   </section>
 
   <section class="footer card">
-    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r20</div>
+    <div>※本ツールは一般的な比較モデル（税引後キャッシュフローの現在価値と等価年額）に基づく参考計算です。実際の会計・税務処理は契約条件・会計基準・税法解釈により異なるため、最終判断は社内方針・顧問税理士の確認のうえ行ってください。<br>© Matsumoto Kaikei / r22</div>
   </section>
 
   <section class="card" id="actions">
@@ -227,7 +227,8 @@
 function byId(id){ return document.getElementById(id); }
 
 // ====== エラーログ補助 ======
-function logError(where,msg){ try{ var el=byId('errLog'); if(el){ el.textContent='['+where+'] '+msg; } }catch(e){}
+function logError(where,msg){
+  try{ var el=byId('errLog'); if(el){ el.textContent='['+where+'] '+msg; } }catch(e){}
   try{ console.error('[buy-vs-lease]', where, msg); }catch(e){}
 }
 window.onerror=function(m,src,ln,col,err){ logError('window.onerror', (m||'')+' @'+(ln||'')+':'+(col||'')); };
@@ -272,24 +273,24 @@ function amortization(loan,rate,nYears){ var n=Math.max(1,Math.round(nYears)); v
 function fmt(n){ return (n>=0?'':'-')+yenFmt(Math.abs(n)); }
 function buildTables(title,rows){ var th='<tr><th>年</th><th>営業CF</th><th>投資/初期</th><th>税効果</th><th>消費税控除</th><th>金融CF</th><th>合計CF</th></tr>'; var trs=''; for(var i=0;i<rows.length;i++){ var r=rows[i]; trs+= '<tr><td>'+r.year+'</td><td>'+fmt(r.ocf)+'</td><td>'+fmt(r.capex)+'</td><td>'+fmt(r.tax)+'</td><td>'+fmt(r.vat)+'</td><td>'+fmt(r.fin)+'</td><td><b>'+fmt(r.total)+'</b></td></tr>'; } return '<h3 style="margin:8px 0">'+title+'</h3><div class="table-scroll"><table>'+th+trs+'</table></div>'; }
 
-// —— 判定グラフ描画（SVG・左寄せ） ——
+// —— 判定グラフ描画（SVG・左寄せ・線グラフ） ——
 function renderChart(metric){
   var el=byId('chartArea'); if(!el||!window._rows){return;}
   var rowsB=window._rows.buyRows, rowsL=window._rows.leaseRows, disc=window._rows.disc||0;
-  function series(rows){ var out=[], s=0; for(var t=0;t<rows.length;t++){ if(metric==='PV'){ s += rows[t].total/Math.pow(1+disc,t); out.push(-s); } else { out.push(-rows[t].total); } } return out; }
+  function series(rows){ var out=[], s=0; for(var t=0;t<rows.length;t++){ var v = rows[t] && isFinite(rows[t].total)? rows[t].total : 0; if(metric==='PV'){ s += v/Math.pow(1+disc,t); out.push(-s); } else { out.push(-v); } } return out; }
   var A=series(rowsB), B=series(rowsL);
   var w=Math.max(260,(el.getBoundingClientRect().width||el.clientWidth||360));
   var h=(window.innerWidth<=640)?170:220; var padL=(window.innerWidth<=640)?28:36, padR=16, padT=14, padB=26;
   var N=Math.max(A.length,B.length); var xstep=(w-padL-padR)/Math.max(1,N-1);
-  var min=0, max=0; for(var i=0;i<A.length;i++){ if(A[i]<min) min=A[i]; if(A[i]>max) max=A[i]; } for(var j=0;j<B.length;j++){ if(B[j]<min) min=B[j]; if(B[j]>max) max=B[j]; }
+  var min=0, max=0; for(var i=0;i<A.length;i++){ if(isFinite(A[i])){ if(A[i]<min) min=A[i]; if(A[i]>max) max=A[i]; } } for(var j=0;j<B.length;j++){ if(isFinite(B[j])){ if(B[j]<min) min=B[j]; if(B[j]>max) max=B[j]; } }
   if(max===min){ max=min+1; }
-  function y(v){ return padT + (h-padT-padB) * (1-(v-min)/(max-min)); }
+  function y(v){ v=isFinite(v)?v:0; return padT + (h-padT-padB) * (1-(v-min)/(max-min)); }
   function x(i){ return padL + i*xstep; }
   function poly(ser){ var pts=''; for(var k=0;k<ser.length;k++){ pts += x(k)+','+y(ser[k])+' '; } return pts.trim(); }
   function circles(ser, color){ var out=''; for(var k=0;k<ser.length;k++){ out+='<circle cx="'+x(k)+'" cy="'+y(ser[k])+'" r="3" fill="'+color+'" fill-opacity="0.6"></circle>'; } return out; }
   var y0=y(0);
   var fontSmall=(window.innerWidth<=640)?11:12;
-  function lastLabel(ser, name, dx){ var i=ser.length-1; var lx=x(i)+dx, ly=y(ser[i])-6; return '<text x="'+lx+'" y="'+ly+'" font-size="'+fontSmall+'" fill="#0f172a">'+name+'：'+yenFmt(ser[i])+'</text>'; }
+  function lastLabel(ser, name, dx){ var i=Math.max(0, ser.length-1); var val=isFinite(ser[i])?ser[i]:0; var lx=x(i)+dx, ly=y(val)-6; return '<text x="'+lx+'" y="'+ly+'" font-size="'+fontSmall+'" fill="#0f172a">'+name+'：'+yenFmt(val)+'</text>'; }
   var legendX=padL, legendY=fontSmall+6;
   var svg='<svg width="100%" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="xMinYMin meet" style="background:#fff;border:1px dashed #e5edf5;border-radius:12px">'
     + '<line x1="'+padL+'" y1="'+y0+'" x2="'+(w-padR)+'" y2="'+y0+'" stroke="#cbd5e1" stroke-width="1"></line>'
@@ -307,7 +308,14 @@ function renderChart(metric){
   el.innerHTML=svg;
 }
 
-function computeCrossover(buyRows,leaseRows,disc){ var years=buyRows.length-1; function pvCostTo(rows,upto){ var s=0; for(var t=0;t<=upto;t++){ s+=rows[t].total/Math.pow(1+disc,t); } return -s; } function winnerAt(y){ return pvCostTo(buyRows,y)<=pvCostTo(leaseRows,y)?'購入':'リース'; } var finalWinner=winnerAt(years); var flip=null; for(var y=0;y<=years;y++){ if(winnerAt(y)!==finalWinner){ flip=y; break; } } return {flipYear:flip,finalWinner:finalWinner,horizon:years}; }
+function computeCrossover(buyRows,leaseRows,disc){
+  var years=buyRows.length-1;
+  function pvCostTo(rows,upto){ var s=0; for(var t=0;t<=upto;t++){ s+=rows[t].total/Math.pow(1+disc,t); } return -s; }
+  function winnerAt(y){ return pvCostTo(buyRows,y)<=pvCostTo(leaseRows,y)?'購入':'リース'; }
+  var finalWinner=winnerAt(years); var flip=null;
+  for(var y=0;y<=years;y++){ if(winnerAt(y)!==finalWinner){ flip=y; break; } }
+  return {flipYear:flip,finalWinner:finalWinner,horizon:years};
+}
 
 // ====== メイン計算 ======
 function run(){
@@ -395,61 +403,73 @@ function run(){
   var metricEl=byId('metric'); if(metricEl){ setTimeout(function(){ renderChart(metricEl.value); },0); setTimeout(function(){ renderChart(metricEl.value); },80); setTimeout(function(){ renderChart(metricEl.value); },200); }
 }
 
-function loadSample(){ try{
-  setVal('years',5); setVal('disc','3.00'); setVal('tax','31.00'); setVal('vatRate','10.00'); setVal('vatCreditRatio','100.00');
-  setVal('buyPrice','5000000'); setVal('life',5); setVal('debtRatio','100.00'); setVal('loanRate','2.00'); setVal('loanYears',5); setVal('holdingCost','100000'); setVal('salvage','0');
-  setVal('leasePay','1100000'); setVal('leaseYears',5); setVal('leaseInit','0'); setVal('leaseBuyout','0'); var el=byId('leaseVatTiming'); if(el){ el.value='upfront'; } setVal('leaseMaint','0');
-  run();
-}catch(e){ logError('loadSample', e.message||e); }
+function loadSample(){
+  try{
+    setVal('years',5); setVal('disc','3.00'); setVal('tax','31.00'); setVal('vatRate','10.00'); setVal('vatCreditRatio','100.00');
+    setVal('buyPrice','5000000'); setVal('life',5); setVal('debtRatio','100.00'); setVal('loanRate','2.00'); setVal('loanYears',5); setVal('holdingCost','100000'); setVal('salvage','0');
+    setVal('leasePay','1100000'); setVal('leaseYears',5); setVal('leaseInit','0'); setVal('leaseBuyout','0'); var el=byId('leaseVatTiming'); if(el){ el.value='upfront'; } setVal('leaseMaint','0');
+    run();
+  }catch(e){ logError('loadSample', e.message||e); }
 }
 
 // ====== 出力ユーティリティ ======
 function csvEscape(v){ if(v==null) return ""; var s=String(v); return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function buildCSVString(rowsObj){ var buyRows=rowsObj.buyRows; var leaseRows=rowsObj.leaseRows; var lines=['Scenario,Year,OCF,CAPEX,Tax,VAT,Financing,Total']; function pushRows(name,rows){ for(var i=0;i<rows.length;i++){ var r=rows[i]; lines.push([name,r.year,r.ocf,r.capex,r.tax,r.vat,r.fin,r.total].map(csvEscape).join(',')); } } pushRows('購入',buyRows); pushRows('リース',leaseRows); return '\uFEFF'+lines.join('\n'); }
-function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r20_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function exportCSV(){ if(!window._rows){ alert('先に試算してください。'); return; } var csv=buildCSVString(window._rows); var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); function pad(n){ return String(n).padStart(2,'0'); } var dt=new Date(); a.download='buy_vs_lease_r22_'+dt.getFullYear()+pad(dt.getMonth()+1)+pad(dt.getDate())+'_'+pad(dt.getHours())+pad(dt.getMinutes())+pad(dt.getSeconds())+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 function copyResult(){ var verdictEl=byId('verdict'); var buyNPVEl=byId('buyNPV'); var leaseNPVEl=byId('leaseNPV'); var buyEACEl=byId('buyEAC'); var leaseEACEl=byId('leaseEAC'); var crossEl=byId('crossover'); var text=['【判定】', verdictEl?verdictEl.textContent:'', '購入 NPC/EAC: '+(buyNPVEl?buyNPVEl.textContent:'')+' / '+(buyEACEl?buyEACEl.textContent:''), 'リース NPC/EAC: '+(leaseNPVEl?leaseNPVEl.textContent:'')+' / '+(leaseEACEl?leaseEACEl.textContent:''), (crossEl?crossEl.textContent:'')].join('\n'); try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ alert('判定結果をコピーしました'); }, function(){ alert(text); }); } else { throw new Error('no clipboard'); } } catch(e){ alert(text); } }
 
 // ====== テスト ======
-function runSelfTests(){ var log=[]; function write(s){ log.push(s); } function ok(name,cond){ write((cond?'✅ ':'❌ ')+name); if(!cond) throw new Error(name); } function step(name,fn){ try{ fn(); write('— '+name+' OK'); } catch(e){ write('— '+name+' ERROR: '+e.message); } }
+function runSelfTests(){
+  var log=[]; function write(s){ log.push(s); }
+  function ok(name,cond){ write((cond?'✅ ':'❌ ')+name); if(!cond) throw new Error(name); }
+  function step(name,fn){ try{ fn(); write('— '+name+' OK'); } catch(e){ write('— '+name+' ERROR: '+e.message); } }
   try{
     step('初期サンプルで実行', function(){ loadSample(); ok('tables に表が描画', byId('tables').innerHTML.indexOf('<table>')>=0); ok('グラフSVGが描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); });
     step('金利2桁小数が正しく解釈', function(){ setVal('loanRate','2.34'); var v=getVal('loanRate'); ok('≈2.34', Math.abs(v-2.34)<1e-9); });
     step('行データ件数（年数+1）', function(){ var r=window._rows; var yrs=r.years; ok('購入行数', r.buyRows.length===yrs+1); ok('リース行数', r.leaseRows.length===yrs+1); });
     step('逆転年APIの一貫性', function(){ var r=window._rows; var cross=computeCrossover(r.buyRows,r.leaseRows,r.disc); ok('horizon=years', cross.horizon===r.years); });
-    step('指標切替で再描画', function(){ var sel=byId('metric'); sel.value='ANNUAL'; renderChart(sel.value); ok('ANNUAL描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); sel.value='PV'; renderChart(sel.value); ok('PV描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); }); sel.value='NPC'; renderChart(sel.value); ok('NPC描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); sel.value='EAC'; renderChart(sel.value); ok('EAC描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); });
+    step('指標切替で再描画', function(){ var sel=byId('metric'); sel.value='ANNUAL'; renderChart(sel.value); ok('ANNUAL描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); sel.value='PV'; renderChart(sel.value); ok('PV描画', byId('chartArea').innerHTML.indexOf('<svg')>=0); });
     step('CSV生成行数', function(){ var r=window._rows; var csv=buildCSVString(r); var lines=csv.split('\n'); var expect=1+(r.years+1)*2; ok('ヘッダ+明細行数', lines.length===expect); });
     step('全角数値の解釈（割引率）', function(){ setVal('disc','３．２５'); var v=getVal('disc'); ok('≈3.25', Math.abs(v-3.25)<1e-9); });
     step('全角カンマの解釈（購入価額）', function(){ setVal('buyPrice','５，０００，０００'); var v=getVal('buyPrice'); ok('=5000000', v===5000000); });
     step('小数点打鍵の保持（3. → 3.）', function(){ var out=fmtInputString('3.',2,true); ok('"3."維持', out==='3.'); });
-  } finally { var tg=byId('testLog'); if(tg){ tg.textContent=log.join('\n'); } }
+  } finally {
+    var tg=byId('testLog'); if(tg){ tg.textContent=log.join('\n'); }
+  }
 }
 
-// ====== 起動処理（強化版） ======
-function scheduleChart(){ var metricEl=byId('metric'); var m=metricEl? metricEl.value : 'EAC'; setTimeout(function(){ renderChart(m); },0); setTimeout(function(){ renderChart(m); },80); setTimeout(function(){ renderChart(m); },200); }
+// ====== 起動処理 ======
+function scheduleChart(){ var metricEl=byId('metric'); var m=metricEl? metricEl.value : 'PV'; setTimeout(function(){ renderChart(m); },0); setTimeout(function(){ renderChart(m); },80); setTimeout(function(){ renderChart(m); },200); }
 function ensureRender(attempt){ attempt = attempt||1; var max=5; var tbl=byId('tables'); var chr=byId('chartArea'); var okT=tbl && tbl.querySelector && tbl.querySelector('table'); var okC=chr && chr.querySelector && chr.querySelector('svg'); if(okT && okC) return; if(attempt<=max){ setTimeout(function(){ try{ if(!window._rows){ run(); } scheduleChart(); }catch(e){ logError('ensureRender', e.message||e); } ensureRender(attempt+1); }, 140*attempt); } }
 function runSafe(){ try{ run(); } catch(e){ logError('run', e.message||e); } }
 
-function initApp(){ if(window._inited) return; window._inited=true; try{
-  bindFormatters();
-  var runBtn=byId('run'); if(runBtn){ runBtn.addEventListener('click', function(){ runSafe(); scheduleChart(); ensureRender(1); }); }
-  var sampBtn=byId('sample'); if(sampBtn){ sampBtn.addEventListener('click', function(){ loadSample(); scheduleChart(); ensureRender(1); }); }
-  var metricEl=byId('metric'); if(metricEl){ metricEl.addEventListener('change', function(){ scheduleChart(); ensureRender(1); }); }
-  var testBtn=byId('runTests'); if(testBtn){ testBtn.addEventListener('click', runSelfTests); }
-  if('ResizeObserver' in window){ var chartArea=byId('chartArea'); if(chartArea){ try{ new ResizeObserver(function(){ scheduleChart(); }).observe(chartArea); }catch(e){} } }
-  var copyBtn=byId('copyBtn'); if(copyBtn){ copyBtn.addEventListener('click', copyResult); }
-  var csvBtn=byId('csvBtn'); if(csvBtn){ csvBtn.addEventListener('click', exportCSV); }
-  var printBtn=byId('printBtn'); if(printBtn){ printBtn.addEventListener('click', function(){ window.print(); }); }
-  // 初回実行（安全ラップ）
-  loadSample();
-  runSafe();
-  scheduleChart();
-  ensureRender(1);
- }catch(e){ logError('initApp', e.message||e); }
+function initApp(){
+  if(window._inited) return; window._inited=true;
+  try{
+    bindFormatters();
+    var runBtn=byId('run'); if(runBtn){ runBtn.addEventListener('click', function(){ runSafe(); scheduleChart(); ensureRender(1); }); }
+    var sampBtn=byId('sample'); if(sampBtn){ sampBtn.addEventListener('click', function(){ loadSample(); scheduleChart(); ensureRender(1); }); }
+    var metricEl=byId('metric'); if(metricEl){ metricEl.addEventListener('change', function(){ scheduleChart(); ensureRender(1); }); }
+    var testBtn=byId('runTests'); if(testBtn){ testBtn.addEventListener('click', runSelfTests); }
+    if('ResizeObserver' in window){ var chartArea=byId('chartArea'); if(chartArea){ try{ new ResizeObserver(function(){ scheduleChart(); }).observe(chartArea); }catch(e){} } }
+    var copyBtn=byId('copyBtn'); if(copyBtn){ copyBtn.addEventListener('click', copyResult); }
+    var csvBtn=byId('csvBtn'); if(csvBtn){ csvBtn.addEventListener('click', exportCSV); }
+    var printBtn=byId('printBtn'); if(printBtn){ printBtn.addEventListener('click', function(){ window.print(); }); }
+    // 初回実行
+    loadSample();
+    runSafe();
+    scheduleChart();
+    ensureRender(1);
+    setTimeout(function(){ runSafe(); scheduleChart(); ensureRender(2); }, 250);
+    setTimeout(function(){ runSafe(); scheduleChart(); ensureRender(3); }, 800);
+  }catch(e){ logError('initApp', e.message||e); }
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
 window.addEventListener('load', initApp);
+window.addEventListener('visibilitychange', function(){ if(!document.hidden){ runSafe(); scheduleChart(); ensureRender(1); }});
 setTimeout(function(){ if(!window._inited){ initApp(); } }, 500);
+try{ initApp(); }catch(e){ logError('immediateInit', e.message||e); }
 </script>
 </body>
 </html>
